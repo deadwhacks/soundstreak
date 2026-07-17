@@ -292,6 +292,10 @@
   @keyframes shimmer{100%{transform:translateX(100%)}}
   .sk-num{display:inline-block;width:96px;height:64px;border-radius:12px;vertical-align:middle}
   .box.sk{aspect-ratio:1}
+  .mdow{display:grid;grid-template-columns:repeat(7,1fr);gap:7px;margin-bottom:6px}
+  .mdow span{text-align:center;font-size:10px;font-weight:700;color:var(--muted-2);letter-spacing:.04em}
+  .box.blank{background:transparent}
+  .empty{color:var(--muted-2);font-size:13px;text-align:center;padding:16px 6px;line-height:1.5}
   @media(prefers-reduced-motion:reduce){.sk::after{animation:none}}
 </style>
 </head>
@@ -349,6 +353,7 @@
     <div class="card">
       <h3>Goals hit this month</h3>
       <div class="monthhead"><span class="m" id="monthName">Month</span><span class="c" id="monthCount">0 / 0</span></div>
+      <div class="mdow"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
       <div class="mgrid" id="mgrid"></div>
       <div class="glegend">
         <span><i style="background:var(--surface-2)"></i>Missed</span>
@@ -462,7 +467,7 @@ const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:v;}ca
 /* ---------- state (empty on load; real data fills in after auth, skeletons show meanwhile) ---------- */
 const today=new Date(); today.setHours(0,0,0,0);
 const GOAL_DEFAULT=60;
-const state={ goal: parseInt(store.get('ss_goal',GOAL_DEFAULT),10)||GOAL_DEFAULT, days: [] };
+const state={ goal: parseInt(store.get('ss_goal',GOAL_DEFAULT),10)||GOAL_DEFAULT, days: [], loaded:false };
 
 let SONGS=[], DISCOVERED=[], GENRES=[], SUGGESTED=[], ALBUMS=[];
 let TOP_ARTIST={name:'',sub:'',img:'',url:''};
@@ -489,6 +494,7 @@ function skRows(n){let o='';for(let i=0;i<n;i++)o+=`<div class="row"><span class
 function skBars(n){let o='';for(let i=0;i<n;i++)o+=`<div class="gbar"><span class="sk" style="width:80px;height:12px;flex:none"></span><span class="sk" style="flex:1;height:9px"></span></div>`;return o;}
 function skTiles(n){let o='';for(let i=0;i<n;i++)o+=`<div class="scard"><span class="sk" style="width:44px;height:44px;border-radius:50%;flex:none"></span><span class="sk" style="width:60%;height:12px"></span></div>`;return o;}
 function skAlbums(n){let o='';for(let i=0;i<n;i++)o+=`<div class="album"><span class="sk" style="display:block;width:100%;aspect-ratio:1;border-radius:12px"></span><span class="sk" style="display:block;width:80%;height:11px;margin-top:9px"></span></div>`;return o;}
+function skOrEmpty(sk,msg){ return state.loaded ? `<div class="empty">${msg}</div>` : sk; }
 
 /* ---------- metrics ---------- */
 function currentStreak(days,goal){if(!days.length)return 0;let i=days.length-1;if(days[i].minutes<goal)i--;let s=0;for(;i>=0;i--){if(days[i].minutes>=goal)s++;else break;}return s;}
@@ -548,22 +554,24 @@ function animateNum(id,target){
 function renderMonth(){
   const {days,goal}=state;
   const y=today.getFullYear(), m=today.getMonth();
-  const dim=new Date(y,m+1,0).getDate();
   document.getElementById('monthName').textContent=MONTHS[m];
   const grid=document.getElementById('mgrid');
-  if(!days.length){ grid.innerHTML=Array.from({length:35},()=>'<div class="box sk"></div>').join('');
+  if(!days.length){ grid.innerHTML=Array.from({length:42},()=>'<div class="box sk"></div>').join('');
     document.getElementById('monthCount').innerHTML='<span class="sk" style="width:56px;height:12px"></span>'; return; }
+  const dim=new Date(y,m+1,0).getDate();
+  const firstDow=new Date(y,m,1).getDay(); // 0=Sun … 6=Sat — aligns day 1 under its real weekday column
   const byDay={}; days.forEach(d=>{if(d.date.getFullYear()===y&&d.date.getMonth()===m)byDay[d.date.getDate()]=d.minutes;});
-  grid.innerHTML=''; let hits=0;
+  let html=''; let hits=0;
+  for(let i=0;i<firstDow;i++) html+='<div class="box blank"></div>'; // leading spacers so dates line up with weekdays
   for(let day=1;day<=dim;day++){
-    const el=document.createElement('div'); el.className='box';
-    const mins=byDay[day];
-    if(day===today.getDate()) el.classList.add('today');
-    if(mins===undefined){ el.classList.add('future'); el.textContent=day; }
-    else if(mins>=goal){ el.classList.add('hit'); el.innerHTML=CHECK; hits++; el.title=day+': '+mins+' min'; }
-    else { el.textContent=day; el.title=day+': '+mins+' min'; }
-    grid.appendChild(el);
+    const mins=byDay[day]; let cls='box', inner=String(day), title='';
+    if(day===today.getDate()) cls+=' today';
+    if(mins===undefined){ cls+=' future'; }
+    else if(mins>=goal){ cls+=' hit'; inner=CHECK; hits++; title=day+': '+mins+' min'; }
+    else { title=day+': '+mins+' min'; }
+    html+=`<div class="${cls}"${title?` title="${title}"`:''}>${inner}</div>`;
   }
+  grid.innerHTML=html;
   const elapsed=Object.keys(byDay).length;
   document.getElementById('monthCount').textContent=hits+' / '+elapsed+' days';
 }
@@ -621,7 +629,7 @@ function renderTaste(){
 
   // songs
   const s=document.getElementById('songs');
-  if(!SONGS.length){ s.innerHTML=skRows(8); } else {
+  if(!SONGS.length){ s.innerHTML=skOrEmpty(skRows(8),'No top songs yet this year'); } else {
   s.innerHTML='';
   SONGS.forEach((r,i)=>{ const href=r[4]?`href="${r[4]}" target="_blank" rel="noopener"`:'';
     s.insertAdjacentHTML('beforeend',
@@ -633,7 +641,7 @@ function renderTaste(){
 
   // discovered
   const d=document.getElementById('discovered');
-  if(!DISCOVERED.length){ d.innerHTML=skRows(5); } else {
+  if(!DISCOVERED.length){ d.innerHTML=skOrEmpty(skRows(5),'No new artists yet — like songs on Spotify and they\'ll show here'); } else {
   d.innerHTML='';
   DISCOVERED.forEach(r=>{ d.insertAdjacentHTML('beforeend',
     `<div class="row">
@@ -644,7 +652,7 @@ function renderTaste(){
 
   // genres (shown as share of listening — works for minutes or artist-genre counts)
   const g=document.getElementById('genres');
-  if(!GENRES.length){ g.innerHTML=skBars(6); } else {
+  if(!GENRES.length){ g.innerHTML=skOrEmpty(skBars(6),'No genre data yet'); } else {
   g.innerHTML='';
   const max=Math.max(...GENRES.map(x=>x[1])), tot=GENRES.reduce((a,x)=>a+x[1],0)||1;
   GENRES.forEach(r=>{ const share=Math.round(r[1]/tot*100);
@@ -656,7 +664,7 @@ function renderTaste(){
 
   // suggested
   const su=document.getElementById('suggested');
-  if(!SUGGESTED.length){ su.innerHTML=skTiles(4); return; }
+  if(!SUGGESTED.length){ su.innerHTML=skOrEmpty(skTiles(4),'No suggestions yet'); return; }
   su.innerHTML='';
   SUGGESTED.forEach(r=>{ const href=r[3]?`href="${r[3]}" target="_blank" rel="noopener"`:'';
     su.insertAdjacentHTML('beforeend',
@@ -715,7 +723,7 @@ function renderHoursArt(){
 }
 function renderAlbums(){
   const box=document.getElementById('albums'); if(!box) return;
-  if(!ALBUMS.length){ box.innerHTML=skAlbums(6); return; }
+  if(!ALBUMS.length){ box.innerHTML=skOrEmpty(skAlbums(6),'No albums yet'); return; }
   box.innerHTML='';
   ALBUMS.forEach(r=>{ const href=r[4]?`href="${r[4]}" target="_blank" rel="noopener"`:'';
     box.insertAdjacentHTML('beforeend',
@@ -1024,7 +1032,7 @@ async function hydrate(){
   // 2) accurate play-count data (Last.fm) + Spotify artwork, then suggestions (need KNOWN + seeds)
   await Promise.allSettled([ run('songs',loadTopSongs), run('hero',loadHero), run('albums',loadAlbums), run('weekly',loadWeekly), run('genres',loadGenres) ]);
   await run('suggest',loadSuggestions);
-  state.live=true; render();
+  state.live=true; state.loaded=true; render();
   loadNowPlaying(); if(!window.__npTimer) window.__npTimer=setInterval(loadNowPlaying,15000);
   if(window.__ssErr&&window.__ssErr.length) console.warn('[SoundStreak] render issues:',window.__ssErr);
 }
