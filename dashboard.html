@@ -58,11 +58,11 @@
   /* ===== top callouts ===== */
   .callouts{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:26px 0 18px}
   @media(max-width:760px){.callouts{grid-template-columns:1fr}}
-  .callout{position:relative;overflow:hidden;padding:30px 28px}
+  .callout{position:relative;overflow:hidden;padding:20px 24px}
   .callout .glow{position:absolute;width:220px;height:220px;filter:blur(80px);opacity:.22;border-radius:50%;top:-70px;right:-40px}
   .callout .lab{position:relative;color:var(--muted);font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px}
-  .callout .num{position:relative;font-family:var(--display);font-weight:700;font-size:96px;line-height:.92;margin-top:6px}
-  .callout .unit{font-size:30px;color:var(--muted);margin-left:8px;font-family:'Poppins',sans-serif;font-weight:700;letter-spacing:-.02em}
+  .callout .num{position:relative;font-family:var(--display);font-weight:700;font-size:clamp(50px,11vw,64px);line-height:.92;margin-top:2px}
+  .callout .unit{font-size:22px;color:var(--muted);margin-left:8px;font-family:'Poppins',sans-serif;font-weight:700;letter-spacing:-.02em}
   .callout .foot{position:relative;color:var(--muted);font-size:13.5px;margin-top:10px}
   .up{color:var(--blue);font-weight:700}
 
@@ -145,7 +145,7 @@
   /* modal */
   .overlay{position:fixed;inset:0;background:rgba(6,7,9,.72);backdrop-filter:blur(4px);z-index:100;display:none;align-items:center;justify-content:center;padding:20px}
   .overlay.show{display:flex}
-  .modal{background:var(--surface);border:1px solid var(--line-2);border-radius:20px;padding:28px;width:100%;max-width:380px;animation:pop .2s ease}
+  .modal{background:var(--surface);border:1px solid var(--line-2);border-radius:20px;padding:28px;width:100%;max-width:380px;max-height:calc(100dvh - 32px);overflow-y:auto;animation:pop .2s ease}
   @keyframes pop{from{opacity:0;transform:scale(.96) translateY(6px)}to{opacity:1;transform:none}}
   .modal h3{font-size:18px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px;text-transform:none;color:var(--text)}
   .modal p{color:var(--muted);font-size:13.5px;margin-bottom:18px}
@@ -217,9 +217,9 @@
   .taste-hero .nm{text-transform:uppercase}
 
   /* ===== streak badge ===== */
-  .callout.has-badge{padding-right:172px}
-  .badgebox{position:absolute;top:50%;right:22px;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;z-index:3}
-  .badgeimg{height:134px;width:auto;object-fit:contain;filter:drop-shadow(0 12px 26px rgba(0,0,0,.55));animation:badgein .55s cubic-bezier(.2,.8,.2,1) both}
+  .callout.has-badge{padding-right:146px}
+  .badgebox{position:absolute;top:50%;right:20px;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:7px;z-index:3}
+  .badgeimg{height:104px;width:auto;object-fit:contain;filter:drop-shadow(0 12px 26px rgba(0,0,0,.55));animation:badgein .55s cubic-bezier(.2,.8,.2,1) both}
   @keyframes badgein{from{opacity:0;transform:scale(.82) translateY(6px)}to{opacity:1}}
   .badge-none{height:120px;width:98px;border-radius:14px;border:2px dashed var(--line-2);display:flex;align-items:center;justify-content:center;text-align:center;color:var(--muted-2);font-size:11px;padding:10px}
   .badge-info{position:relative;cursor:default;color:var(--muted);font-size:11px;display:flex;align-items:center;gap:5px}
@@ -303,6 +303,21 @@
   .box.blank{background:transparent}
   .empty{color:var(--muted-2);font-size:13px;text-align:center;padding:16px 6px;line-height:1.5}
   @media(prefers-reduced-motion:reduce){.sk::after{animation:none}}
+
+  /* ===== hamburger + side menu ===== */
+  .menu-btn{display:flex;flex-direction:column;justify-content:center;gap:5px;width:44px;height:44px;padding:11px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line-2);cursor:pointer}
+  .menu-btn span{display:block;height:2px;width:100%;background:var(--text);border-radius:2px}
+  .menu-btn:hover{border-color:var(--green)}
+  .side-overlay{position:fixed;inset:0;background:rgba(6,7,9,.6);backdrop-filter:blur(3px);z-index:90;opacity:0;pointer-events:none;transition:opacity .2s}
+  .side-overlay.show{opacity:1;pointer-events:auto}
+  .side-menu{position:fixed;top:0;right:0;bottom:0;width:min(300px,82vw);background:var(--surface);border-left:1px solid var(--line-2);z-index:100;
+    transform:translateX(100%);transition:transform .25s cubic-bezier(.2,.7,.2,1);padding:24px 20px;display:flex;flex-direction:column;gap:18px}
+  .side-menu.show{transform:none}
+  .side-head{display:flex;align-items:center;gap:12px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+  .side-name{font-weight:700;font-size:15px}
+  .side-sub{color:var(--muted);font-size:12.5px}
+  .side-item{text-align:left;cursor:pointer;background:var(--surface-2);border:1px solid var(--line-2);color:var(--text);font-family:'Poppins',sans-serif;font-weight:700;font-size:14.5px;padding:13px 16px;border-radius:12px;transition:border-color .15s}
+  .side-item:hover{border-color:var(--green)}
 </style>
 </head>
 <body>
@@ -313,13 +328,17 @@
 <nav>
   <div class="wrap navrow">
     <a href="./index.html"><img class="logo" src="./SoundStreakLogoDarkMode.svg" alt="SoundStreak" /></a>
-    <div class="navright">
-      <span class="pill"><span class="dot" id="connDot"></span><span id="connText">Connecting…</span></span>
-      <div class="avatar" id="avatar">J</div>
-      <button class="connectbtn" id="logoutBtn" style="background:var(--surface-2);color:#fff;border:1px solid var(--line-2)">Log out</button>
-    </div>
+    <button class="menu-btn" id="menuBtn" aria-label="Menu"><span></span><span></span><span></span></button>
   </div>
 </nav>
+
+<!-- side menu -->
+<div class="side-overlay" id="sideOverlay"></div>
+<aside class="side-menu" id="sideMenu">
+  <div class="side-head"><div class="avatar" id="avatar">J</div>
+    <div><div class="side-name">Signed in</div><div class="side-sub">Spotify + Last.fm</div></div></div>
+  <button class="side-item" id="logoutBtn">Log out</button>
+</aside>
 
 <div class="wrap">
 
@@ -348,7 +367,6 @@
       <div class="glow" style="background:var(--violet)"></div>
       <div class="lab">🎧 Hours listened this year</div>
       <div class="num grad-text"><span id="yearHours">0</span><span class="unit" style="-webkit-text-fill-color:var(--muted)"> hrs</span></div>
-      <div class="callout-sub"><span class="up" id="pace">▲</span> <span id="paceTxt">tracking since you connected</span></div>
       <div class="callout-art" id="hoursArt"></div>
       <div class="callout-art-lab" id="hoursArtLab"></div>
     </div>
@@ -1013,7 +1031,6 @@ function setNowPlaying(np){
     ? '<span class="eq"><span></span><span></span><span></span><span></span></span> Now playing'
     : 'Last played';
   if(np.url) b.href=np.url; else b.removeAttribute('href');
-  const ct=document.getElementById('connText'); if(ct) ct.textContent = np.playing ? ('♪ '+trim(np.name,18)) : 'Connected';
 }
 async function loadNowPlaying(){
   const at=await getToken(); if(!at) return;
@@ -1033,10 +1050,9 @@ async function loadNowPlaying(){
 }
 
 /* ---- UI state ---- */
-function setConnecting(){document.getElementById('connText').textContent='Loading…';}
+function setConnecting(){}
 function markLive(){
   const btn=document.getElementById('connectBtn'); if(btn) btn.style.display='none';
-  document.getElementById('connText').textContent = 'Connected';
   const foot=document.getElementById('pageFoot');
   if(foot){ const days=state.days.filter(d=>d.minutes>0).length;
     foot.textContent = days<14
@@ -1063,6 +1079,10 @@ async function hydrate(){
 /* ---------- init: gated, two-step connect (Spotify → Last.fm) ---------- */
 const logoutBtn=document.getElementById('logoutBtn');
 if(logoutBtn) logoutBtn.onclick=()=>{ ['ss_at','ss_rt','ss_exp','ss_verifier','ss_lastfm_user'].forEach(k=>store.set(k,'')); location.replace('./index.html'); };
+const menuBtn=document.getElementById('menuBtn'), sideMenu=document.getElementById('sideMenu'), sideOverlay=document.getElementById('sideOverlay');
+function toggleMenu(open){ if(sideMenu) sideMenu.classList.toggle('show',open); if(sideOverlay) sideOverlay.classList.toggle('show',open); }
+if(menuBtn) menuBtn.onclick=()=>toggleMenu(!sideMenu.classList.contains('show'));
+if(sideOverlay) sideOverlay.onclick=()=>toggleMenu(false);
 (async ()=>{
   const params=new URLSearchParams(location.search);
   const spCode=params.get('code'), lfmToken=params.get('token');
