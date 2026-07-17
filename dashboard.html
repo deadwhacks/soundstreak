@@ -70,8 +70,9 @@
   .charts{display:grid;grid-template-columns:1.15fr .85fr 1.5fr;gap:18px;margin-bottom:18px}
   @media(max-width:1040px){.charts{grid-template-columns:1fr 1fr}.chart-year{grid-column:1/-1}}
   @media(max-width:680px){.charts{grid-template-columns:1fr}}
-  /* fixed-height wrapper stops Chart.js from expanding infinitely */
-  .chart-box{position:relative;height:230px;width:100%}
+  /* chart fills the card so it matches the taller month card (no empty space) */
+  .chart-year{display:flex;flex-direction:column}
+  .chart-box{position:relative;flex:1;min-height:210px;width:100%}
   .chart-box canvas{position:absolute;inset:0}
 
   /* month grid */
@@ -585,14 +586,16 @@ function renderYear(){
   let cvs=document.getElementById('yearChart');
   if(!cvs){ wrap.innerHTML='<canvas id="yearChart"></canvas>'; cvs=document.getElementById('yearChart'); }
   const ctx=cvs.getContext('2d');
-  const g=ctx.createLinearGradient(0,0,0,230); g.addColorStop(0,'#1ED760'); g.addColorStop(1,'#17B04E');
+  // gradient spans the actual chart area, so it adapts to any card height
+  const barGrad=(c)=>{const a=c.chart.chartArea; if(!a) return '#1ED760';
+    const gg=ctx.createLinearGradient(0,a.top,0,a.bottom); gg.addColorStop(0,'#1ED760'); gg.addColorStop(1,'#17B04E'); return gg;};
   // label only the first of each month so we avoid needing a date-adapter (category scale)
   const dates=days.map(d=>d.date);
   const labels=dates.map(d=>d.getDate()===1?MONTHS_ABBR[d.getMonth()]:'');
   const data=days.map(d=>d.minutes);
   if(yearChartRef) yearChartRef.destroy();
   yearChartRef=new Chart(ctx,{type:'bar',
-    data:{labels,datasets:[{data,backgroundColor:g,borderRadius:2,barPercentage:1,categoryPercentage:1}]},
+    data:{labels,datasets:[{data,backgroundColor:barGrad,borderRadius:2,barPercentage:1,categoryPercentage:1}]},
     options:{maintainAspectRatio:false,plugins:{legend:{display:false},
       tooltip:{callbacks:{title:items=>dates[items[0].dataIndex].toLocaleDateString(undefined,{month:'short',day:'numeric'}),
         label:c=>c.parsed.y+' min'}}},
@@ -697,14 +700,17 @@ function renderWrapped(){
     el.innerHTML=`<div class="wr-head"><div><span class="sk" style="display:block;width:120px;height:12px;margin-bottom:8px"></span><span class="sk" style="display:block;width:200px;height:24px"></span></div></div>
       <div class="wr-grid">${'<div class="wr-stat"><span class="sk" style="display:block;width:70%;height:11px;margin-bottom:12px"></span><span class="sk" style="display:block;width:50%;height:28px"></span></div>'.repeat(4)}</div>`;
     return; }
-  const dr = WEEK.from ? (new Date(WEEK.from).toLocaleDateString(undefined,{month:'short',day:'numeric'})+' – '+new Date(WEEK.to).toLocaleDateString(undefined,{month:'short',day:'numeric'})) : 'This week';
-  const locked=!WEEK.unlocked;
-  el.className='wrapped'+(locked?' locked':'');
+  let goalDays=0;
+  state.days.forEach(d=>{ const t=d.date.getTime(); if(t>=WEEK.weekStart && t<WEEK.weekEnd && d.minutes>=state.goal) goalDays++; });
+  const unlocked=goalDays>=7;
+  const s=new Date(WEEK.weekStart), e=new Date(WEEK.weekEnd-86400000);
+  const dr=s.toLocaleDateString(undefined,{month:'short',day:'numeric'})+' – '+e.toLocaleDateString(undefined,{month:'short',day:'numeric'});
+  el.className='wrapped'+(unlocked?'':' locked');
   el.innerHTML=`
     <div class="wr-head">
       <div><div class="kicker" style="color:var(--green)">Week of ${dr}</div>
-        <div class="wr-title">${locked?'Wrapped locked':'Wrapped unlocked 🎉'}</div></div>
-      <div class="wr-badge">${WEEK.goalDays||0}/7 goal days</div>
+        <div class="wr-title">${unlocked?'Wrapped unlocked 🎉':'Wrapped locked'}</div></div>
+      <div class="wr-badge">${goalDays}/7 goal days</div>
     </div>
     <div class="wr-body"><div class="wr-grid">
       <div class="wr-stat"><div class="wr-k">Listened</div><div class="wr-v">${Math.round((WEEK.plays||0)*3.5)}</div><div class="wr-s">minutes</div></div>
@@ -712,7 +718,7 @@ function renderWrapped(){
       <div class="wr-stat"><div class="wr-k">Top track</div><div class="wr-v sm">${WEEK.track||'—'}</div><div class="wr-s">${WEEK.trackArtist||''}</div></div>
       <div class="wr-stat"><div class="wr-k">Top album</div><div class="wr-v sm">${WEEK.album||'—'}</div></div>
     </div></div>
-    ${locked?`<div class="wr-lock"><div class="wr-lockmsg">🔒 Hit your daily goal <b>every day this week</b> to unlock your Weekly Wrapped.<br><span>${WEEK.goalDays||0} of 7 goal days so far — keep your streak alive.</span></div></div>`:''}`;
+    ${unlocked?'':`<div class="wr-lock"><div class="wr-lockmsg">🔒 Hit your daily goal <b>every day this week</b> (Sun–Sat) to unlock your Weekly Wrapped.<br><span>${goalDays} of 7 goal days so far — keep your streak alive.</span></div></div>`}`;
 }
 function renderHoursArt(){
   const art=document.getElementById('hoursArt'), lab=document.getElementById('hoursArtLab');
@@ -938,15 +944,24 @@ async function loadDiscovered(){
 }
 async function loadHistory(){
   const yr=new Date().getFullYear(), from=Math.floor(new Date(yr,0,1).getTime()/1000);
-  const perDay={}; let page=1,total=1;
+  // current week = Sunday 00:00 → next Sunday (Sun–Sat), local time
+  const ws=new Date(); ws.setHours(0,0,0,0); ws.setDate(ws.getDate()-ws.getDay());
+  const weekStart=ws.getTime(), weekEnd=weekStart+7*86400000;
+  const perDay={}; const wA={},wT={},wAl={}; let wPlays=0; let page=1,total=1;
   while(page<=total && page<=20){
     const j=await lfm('user.getrecenttracks',{limit:200,from,page});
     const rt=j&&j.recenttracks; if(!rt) break;
     total=parseInt((rt['@attr']||{}).totalPages||'1',10);
     (rt.track||[]).forEach(t=>{
       const an=(t.artist||{})['#text']; if(an) KNOWN.add(an.toLowerCase()); // scrobbled = known
-      if(t['@attr']&&t['@attr'].nowplaying){ if(!NOW) NOW={name:t.name,artist:(t.artist||{})['#text']||''}; return; }
-      if(t.date){ const d=new Date(t.date.uts*1000); d.setHours(0,0,0,0); perDay[d.getTime()]=(perDay[d.getTime()]||0)+1; }
+      if(t['@attr']&&t['@attr'].nowplaying){ if(!NOW) NOW={name:t.name,artist:an||''}; return; }
+      if(!t.date) return;
+      const ts=t.date.uts*1000; const d=new Date(ts); d.setHours(0,0,0,0); perDay[d.getTime()]=(perDay[d.getTime()]||0)+1;
+      if(ts>=weekStart && ts<weekEnd){ wPlays++;
+        if(an) wA[an]=(wA[an]||0)+1;
+        const tn=t.name||''; if(tn) wT[tn+'|'+(an||'')]=(wT[tn+'|'+(an||'')]||0)+1;
+        const al=(t.album||{})['#text']||''; if(al) wAl[al]=(wAl[al]||0)+1;
+      }
     });
     page++;
   }
@@ -956,6 +971,10 @@ async function loadHistory(){
     days.push({date:new Date(d),minutes:Math.round(c*3.5)});
   }
   state.days=days;
+  const top=o=>{const e=Object.entries(o).sort((a,b)=>b[1]-a[1])[0];return e?e[0]:'';};
+  const tt=top(wT);
+  WEEK={ weekStart, weekEnd, plays:wPlays, artist:top(wA),
+    track: tt?tt.split('|')[0]:'', trackArtist: tt?tt.split('|')[1]:'', album:top(wAl) };
 }
 
 /* ---- top albums (Last.fm, real cover art) ---- */
@@ -965,22 +984,6 @@ async function loadAlbums(){
   ALBUMS=arr.map(a=>[a.name,(a.artist||{}).name||'',(a.playcount||''),lfmImg(a.image),
     'https://open.spotify.com/search/'+encodeURIComponent(a.name+' '+((a.artist||{}).name||''))]);
 }
-/* ---- weekly wrapped (Last.fm weekly charts, gated by hitting your goal every day) ---- */
-async function loadWeekly(){
-  const [aw,tw,alw]=await Promise.all([
-    lfm('user.getweeklyartistchart',{}), lfm('user.getweeklytrackchart',{}), lfm('user.getweeklyalbumchart',{})]);
-  const A=(aw&&aw.weeklyartistchart)||{}, T=(tw&&tw.weeklytrackchart)||{}, L=(alw&&alw.weeklyalbumchart)||{};
-  const artists=A.artist||[], tracks=T.track||[], albums=L.album||[];
-  const at=A['@attr']||{}; const from=parseInt(at.from||0,10)*1000, to=parseInt(at.to||0,10)*1000;
-  const plays=tracks.reduce((s,t)=>s+(parseInt(t.playcount||0,10)||0),0);
-  let goalDays=0;
-  state.days.forEach(d=>{ const t=d.date.getTime();
-    if(from&&to&&t>=from-43200000&&t<=to+43200000&&d.minutes>=state.goal) goalDays++; });
-  WEEK={ from,to,plays, artist:(artists[0]||{}).name||'', track:(tracks[0]||{}).name||'',
-    trackArtist:((tracks[0]||{}).artist||{}).name||'', album:(albums[0]||{}).name||'',
-    goalDays, unlocked: goalDays>=7 };
-}
-
 /* ---- now playing (Spotify currently-playing, polled live) ---- */
 let NOW_LAST=null;
 function setNowPlaying(np){
@@ -1030,7 +1033,7 @@ async function hydrate(){
   await Promise.allSettled([ run('profile',loadProfile), run('seeds',loadTasteSeeds), run('discovered',loadDiscovered), run('history',loadHistory) ]);
   markLive(); render();
   // 2) accurate play-count data (Last.fm) + Spotify artwork, then suggestions (need KNOWN + seeds)
-  await Promise.allSettled([ run('songs',loadTopSongs), run('hero',loadHero), run('albums',loadAlbums), run('weekly',loadWeekly), run('genres',loadGenres) ]);
+  await Promise.allSettled([ run('songs',loadTopSongs), run('hero',loadHero), run('albums',loadAlbums), run('genres',loadGenres) ]);
   await run('suggest',loadSuggestions);
   state.live=true; state.loaded=true; render();
   loadNowPlaying(); if(!window.__npTimer) window.__npTimer=setInterval(loadNowPlaying,15000);
