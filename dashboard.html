@@ -496,7 +496,7 @@ const state={ goal: parseInt(store.get('ss_goal',GOAL_DEFAULT),10)||GOAL_DEFAULT
 
 let SONGS=[], DISCOVERED=[], GENRES=[], SUGGESTED=[], ALBUMS=[];
 let TOP_ARTIST={name:'',sub:'',img:'',url:''};
-let NOW=null, ARTISTS_IMG={}, KNOWN=new Set(), SEEDS=[];
+let NOW=null, ARTISTS_IMG={}, KNOWN=new Set(), SEEDS=[], SCROBBLE_ART={};
 let WEEK=null;
 const BADGES=[
   {d:1,img:'./badges/badge-1.png',label:'1 day'},
@@ -947,19 +947,18 @@ async function loadGenres(){
 async function loadTopSongs(){
   const j=await lfm('user.gettoptracks',{period:'12month',limit:8});
   const arr=(j&&j.toptracks&&j.toptracks.track)||[]; if(!arr.length) return;
-  const out=[];
-  for(const t of arr){ const artist=(t.artist||{}).name||''; const art=await spSearchTrack(t.name,artist);
-    out.push([t.name,artist,(t.playcount||''),art.img,art.url]); }
-  SONGS=out;
+  // album art from your scrobbles (no /search); link opens the track in Spotify search
+  SONGS=arr.map(t=>{ const artist=(t.artist||{}).name||''; const k=(t.name||'').toLowerCase()+'|'+artist.toLowerCase();
+    return [t.name,artist,(t.playcount||''), SCROBBLE_ART[k]||'', 'https://open.spotify.com/search/'+encodeURIComponent((t.name||'')+' '+artist)]; });
 }
 async function loadHero(){
   const j=await lfm('user.gettopartists',{period:'12month',limit:5});
   const arr=(j&&j.topartists&&j.topartists.artist)||[]; if(!arr.length) return;
   arr.forEach(a=>KNOWN.add(a.name.toLowerCase()));
   if(!SEEDS.length) SEEDS=arr.map(a=>a.name);
-  const top=arr[0]; const info=await spSearchArtist(top.name);
-  TOP_ARTIST={name:top.name, sub:(top.playcount?top.playcount+' plays this year':'Your top artist'),
-    img:(info&&info.big)||'', url:(info&&info.url)||''};
+  const top=arr[0]; let img=ARTISTS_IMG[top.name]||'', url='';
+  if(!img){ const info=await spSearchArtist(top.name); img=(info&&info.big)||''; url=(info&&info.url)||''; }
+  TOP_ARTIST={name:top.name, sub:(top.playcount?top.playcount+' plays this year':'Your top artist'), img, url};
 }
 
 /* New artists to check out = similar to your favorites, EXCLUDING anyone you already know */
@@ -1005,13 +1004,14 @@ async function loadHistory(){
   // current week = Sunday 00:00 → next Sunday (Sun–Sat), local time
   const ws=new Date(); ws.setHours(0,0,0,0); ws.setDate(ws.getDate()-ws.getDay());
   const weekStart=ws.getTime(), weekEnd=weekStart+7*86400000;
-  const perDay={}; const wA={},wT={},wAl={}; let wPlays=0; let page=1,total=1;
+  const perDay={}; const wA={},wT={},wAl={}; let wPlays=0; let page=1,total=1; SCROBBLE_ART={};
   while(page<=total && page<=20){
     const j=await lfm('user.getrecenttracks',{limit:200,from,page});
     const rt=j&&j.recenttracks; if(!rt) break;
     total=parseInt((rt['@attr']||{}).totalPages||'1',10);
     (rt.track||[]).forEach(t=>{
       const an=(t.artist||{})['#text']; if(an) KNOWN.add(an.toLowerCase()); // scrobbled = known
+      const _art=lfmImg(t.image); if(t.name&&_art){ const _k=t.name.toLowerCase()+'|'+(an||'').toLowerCase(); if(!SCROBBLE_ART[_k]) SCROBBLE_ART[_k]=_art; } // real album art from scrobbles
       if(t['@attr']&&t['@attr'].nowplaying){ if(!NOW) NOW={name:t.name,artist:an||''}; return; }
       if(!t.date) return;
       const ts=t.date.uts*1000; const d=new Date(ts); d.setHours(0,0,0,0); perDay[d.getTime()]=(perDay[d.getTime()]||0)+1;
@@ -1095,9 +1095,10 @@ async function hydrate(){
   markLive(); render();
   // 2) accurate play-count data (Last.fm) + Spotify artwork, then suggestions (need KNOWN + seeds)
   await Promise.allSettled([ run('songs',loadTopSongs), run('hero',loadHero), run('albums',loadAlbums), run('genres',loadGenres) ]);
-  await run('suggest',loadSuggestions);
   state.live=true; state.loaded=true; render();
   loadNowPlaying(); if(!window.__npTimer) window.__npTimer=setInterval(loadNowPlaying,15000);
+  // suggestion photos use /search — run in the background so they never block the page
+  run('suggest',loadSuggestions).then(()=>render());
   if(window.__ssErr&&window.__ssErr.length) console.warn('[SoundStreak] render issues:',window.__ssErr);
 }
 
