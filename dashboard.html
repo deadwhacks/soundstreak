@@ -778,7 +778,7 @@ document.getElementById('cancelGoal').onclick=()=>overlay.classList.remove('show
 overlay.onclick=e=>{if(e.target===overlay)overlay.classList.remove('show');};
 goalInput.oninput=()=>markPreset(parseInt(goalInput.value,10));
 document.getElementById('saveGoal').onclick=()=>{
-  const v=parseInt(goalInput.value,10); if(v>0){state.goal=v;store.set('ss_goal',v);render();}
+  const v=parseInt(goalInput.value,10); if(v>0){state.goal=v;store.set('ss_goal',v);saveGoalRemote(v);render();}
   overlay.classList.remove('show');
 };
 const badgeOverlay=document.getElementById('badgeOverlay');
@@ -863,8 +863,17 @@ function lfmImg(arr){ if(!arr) return ''; const m={}; arr.forEach(x=>m[x.size]=x
 /* ---- loaders ---- */
 async function loadProfile(){
   const me=await spGet('/me');
-  if(me&&me.display_name) document.getElementById('avatar').textContent=me.display_name[0].toUpperCase();
+  if(!me) return;
+  if(me.display_name) document.getElementById('avatar').textContent=me.display_name[0].toUpperCase();
+  if(me.id){
+    store.set('ss_uid',me.id);
+    // pull the cloud-synced daily goal so it matches across devices
+    try{ const r=await fetch('/api/goal?uid='+encodeURIComponent(me.id));
+      if(r.ok){ const j=await r.json(); if(j&&j.goal>0){ state.goal=parseInt(j.goal,10); store.set('ss_goal',state.goal); } } }catch(e){}
+  }
 }
+function saveGoalRemote(v){ const uid=store.get('ss_uid',''); if(!uid) return;
+  try{ fetch('/api/goal',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({uid,goal:v})}); }catch(e){} }
 /* Spotify search helpers (for real artwork + open links) */
 async function spSearchArtist(name){
   const j=await spGet('/search?type=artist&limit=8&q='+encodeURIComponent(name));
