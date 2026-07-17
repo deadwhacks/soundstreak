@@ -284,6 +284,15 @@
   .callout-art-lab{position:absolute;right:22px;bottom:20px;text-align:right;z-index:2}
   .callout-art-lab .k{font-size:10px;text-transform:uppercase;letter-spacing:.16em;color:var(--green);font-weight:700}
   .callout-art-lab .n{font-family:var(--display);font-weight:800;font-size:19px;letter-spacing:-.02em;text-transform:uppercase;margin-top:2px}
+
+  /* ===== loading skeletons ===== */
+  .sk{position:relative;overflow:hidden;background:var(--surface-2);border-radius:8px}
+  .sk::after{content:"";position:absolute;inset:0;transform:translateX(-100%);
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.07),transparent);animation:shimmer 1.25s infinite}
+  @keyframes shimmer{100%{transform:translateX(100%)}}
+  .sk-num{display:inline-block;width:96px;height:64px;border-radius:12px;vertical-align:middle}
+  .box.sk{aspect-ratio:1}
+  @media(prefers-reduced-motion:reduce){.sk::after{animation:none}}
 </style>
 </head>
 <body>
@@ -417,7 +426,7 @@
   </div>
 
   <div class="foot" id="pageFoot">
-    Running on sample data — connect Spotify to see your own.
+    Loading your listening data…
   </div>
 </div>
 
@@ -450,46 +459,15 @@
 const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:v;}catch(e){return d;}},
   set(k,v){try{localStorage.setItem(k,v);}catch(e){}}};
 
-/* ---------- sample data ---------- */
-function seeded(s){return function(){s=(s*1664525+1013904223)%4294967296;return s/4294967296;};}
-const rnd=seeded(20260717);
+/* ---------- state (empty on load; real data fills in after auth, skeletons show meanwhile) ---------- */
 const today=new Date(); today.setHours(0,0,0,0);
 const GOAL_DEFAULT=60;
+const state={ goal: parseInt(store.get('ss_goal',GOAL_DEFAULT),10)||GOAL_DEFAULT, days: [] };
 
-function buildDays(){
-  const days=[]; const start=new Date(today.getFullYear(),0,1);
-  for(let d=new Date(start); d<=today; d.setDate(d.getDate()+1)){
-    const daysAgo=Math.round((today-d)/86400000);
-    const dow=d.getDay(); const weekend=(dow===0||dow===6)?40:0;
-    let min=Math.round(45+weekend+rnd()*80);
-    if(rnd()<0.14) min=Math.round(rnd()*40);          // some low/miss days
-    if(daysAgo<=18 && daysAgo>=1) min=Math.round(70+rnd()*70); // last 18 days: solid (streak)
-    if(daysAgo===19) min=22;                          // break before that
-    if(daysAgo===0) min=34;                           // today: in progress
-    days.push({date:new Date(d),minutes:min});
-  }
-  return days;
-}
-const state={ goal: parseInt(store.get('ss_goal',GOAL_DEFAULT),10)||GOAL_DEFAULT, days: buildDays() };
-
-let SONGS=[
-  ["Church","Alison Wonderland",92,""],["Midnight City","M83",81,""],["Innerbloom","RÜFÜS DU SOL",76,""],
-  ["Kerala","Bonobo",68,""],["Genesis","Grimes",61,""],["Runaway","Kanye West",57,""],
-  ["Losing It","FISHER",55,""],["Tadow","Masego",49,""],
-];
-let DISCOVERED=[
-  ["Alison Wonderland","♥ Liked · Feb 2026",92,""],["FISHER","♥ Liked · Apr 2026",55,""],["Masego","♥ Liked · Mar 2026",49,""],
-  ["Fred again..","♥ Liked · May 2026",44,""],["Sofia Kourtesis","♥ Liked · Jun 2026",31,""],
-];
-let GENRES=[["Electronic",5820],["Indie",3910],["House",3120],["Hip-Hop",2450],["Ambient",1360],["Jazz",980]];
-let SUGGESTED=[
-  ["Anfisa Letyago","Because you like FISHER",""],["ANOTR","From your House rotation",""],
-  ["Jamie xx","Fans of Bonobo love this",""],["KAYTRANADA","Based on Masego",""],
-];
-let TOP_ARTIST={name:"Alison Wonderland",sub:'92 plays · top track "Church"',img:""};
+let SONGS=[], DISCOVERED=[], GENRES=[], SUGGESTED=[], ALBUMS=[];
+let TOP_ARTIST={name:'',sub:'',img:'',url:''};
 let NOW=null, ARTISTS_IMG={}, KNOWN=new Set(), SEEDS=[];
 let WEEK=null;
-let ALBUMS=[["WHACK'S MUSEUM","Tierra Whack",51,"",""],["Detour","Samara Cyn",14,"",""],["GNX","Kendrick Lamar",22,"",""],["Cry Baby","Vince Staples",9,"",""],["IGOR","Tyler, The Creator",7,"",""],["Melophobia","Cage The Elephant",6,"",""]];
 const BADGES=[
   {d:1,img:'./badges/badge-1.png',label:'1 day'},
   {d:7,img:'./badges/badge-7.png',label:'1 week'},
@@ -506,11 +484,17 @@ function hue(str){let h=0;for(const c of str)h=(h*31+c.charCodeAt(0))%360;return
 function grad(str){const a=hue(str),b=(a+50)%360;return `linear-gradient(135deg,hsl(${a} 68% 56%),hsl(${b} 62% 46%))`;}
 function initials(str){return str.split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase();}
 
+/* ---------- loading skeletons ---------- */
+function skRows(n){let o='';for(let i=0;i<n;i++)o+=`<div class="row"><span class="sk" style="width:44px;height:44px;border-radius:9px;flex:none"></span><div class="rmeta"><span class="sk" style="display:block;width:62%;height:12px;margin-bottom:8px"></span><span class="sk" style="display:block;width:40%;height:10px"></span></div></div>`;return o;}
+function skBars(n){let o='';for(let i=0;i<n;i++)o+=`<div class="gbar"><span class="sk" style="width:80px;height:12px;flex:none"></span><span class="sk" style="flex:1;height:9px"></span></div>`;return o;}
+function skTiles(n){let o='';for(let i=0;i<n;i++)o+=`<div class="scard"><span class="sk" style="width:44px;height:44px;border-radius:50%;flex:none"></span><span class="sk" style="width:60%;height:12px"></span></div>`;return o;}
+function skAlbums(n){let o='';for(let i=0;i<n;i++)o+=`<div class="album"><span class="sk" style="display:block;width:100%;aspect-ratio:1;border-radius:12px"></span><span class="sk" style="display:block;width:80%;height:11px;margin-top:9px"></span></div>`;return o;}
+
 /* ---------- metrics ---------- */
-function currentStreak(days,goal){let i=days.length-1;if(days[i].minutes<goal)i--;let s=0;for(;i>=0;i--){if(days[i].minutes>=goal)s++;else break;}return s;}
+function currentStreak(days,goal){if(!days.length)return 0;let i=days.length-1;if(days[i].minutes<goal)i--;let s=0;for(;i>=0;i--){if(days[i].minutes>=goal)s++;else break;}return s;}
 function longestStreak(days,goal){let b=0,c=0;for(const d of days){if(d.minutes>=goal){c++;b=Math.max(b,c);}else c=0;}return b;}
 function yearMinutes(days){return days.reduce((a,d)=>a+d.minutes,0);}
-function todayMinutes(days){return days[days.length-1].minutes;}
+function todayMinutes(days){return days.length?days[days.length-1].minutes:0;}
 const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
 const CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="#0b0b0b" stroke-width="3.4"><path d="M5 12l4 4 10-10" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
@@ -521,14 +505,27 @@ function render(){
   window.__ssErr=[];
   const step=(name,fn)=>{ try{ fn(); }catch(e){ const m=name+': '+((e&&e.message)||e); window.__ssErr.push(m); console.error('[SoundStreak] render '+m,e); } };
 
+  const ready=days.length>0;
   step('callouts',()=>{
+    if(!ready){
+      document.getElementById('streakNum').innerHTML='<span class="sk sk-num"></span>';
+      document.getElementById('yearHours').innerHTML='<span class="sk sk-num"></span>';
+      document.getElementById('longest').innerHTML='<span class="sk" style="width:20px;height:12px"></span>';
+      return;
+    }
     animateNum('streakNum',currentStreak(days,goal));
     document.getElementById('longest').textContent=longestStreak(days,goal);
     animateNum('yearHours',Math.round(yearMinutes(days)/60));
   });
   step('ring',()=>{
+    const rf=document.getElementById('ringFill'); const circ=2*Math.PI*78;
+    if(!ready){
+      rf.style.strokeDasharray=circ; rf.style.strokeDashoffset=circ;
+      document.getElementById('ringPct').innerHTML='<span class="sk" style="width:44px;height:26px"></span>';
+      document.getElementById('todayMin').textContent='–'; document.getElementById('goalMin').textContent=goal;
+      return;
+    }
     const tm=todayMinutes(days); const pct=goal>0?Math.min(100,Math.round(tm/goal*100)):0;
-    const circ=2*Math.PI*78; const rf=document.getElementById('ringFill');
     rf.style.strokeDasharray=circ; rf.style.strokeDashoffset=circ*(1-pct/100);
     document.getElementById('ringPct').textContent=pct+'%';
     document.getElementById('todayMin').textContent=tm;
@@ -553,8 +550,11 @@ function renderMonth(){
   const y=today.getFullYear(), m=today.getMonth();
   const dim=new Date(y,m+1,0).getDate();
   document.getElementById('monthName').textContent=MONTHS[m];
+  const grid=document.getElementById('mgrid');
+  if(!days.length){ grid.innerHTML=Array.from({length:35},()=>'<div class="box sk"></div>').join('');
+    document.getElementById('monthCount').innerHTML='<span class="sk" style="width:56px;height:12px"></span>'; return; }
   const byDay={}; days.forEach(d=>{if(d.date.getFullYear()===y&&d.date.getMonth()===m)byDay[d.date.getDate()]=d.minutes;});
-  const grid=document.getElementById('mgrid'); grid.innerHTML=''; let hits=0;
+  grid.innerHTML=''; let hits=0;
   for(let day=1;day<=dim;day++){
     const el=document.createElement('div'); el.className='box';
     const mins=byDay[day];
@@ -570,9 +570,13 @@ function renderMonth(){
 
 const MONTHS_ABBR=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 function renderYear(){
-  const {days}=state;
+  const {days}=state; const wrap=document.querySelector('.chart-box'); if(!wrap) return;
+  if(!days.length){ if(yearChartRef){yearChartRef.destroy();yearChartRef=null;}
+    wrap.innerHTML='<div class="sk" style="position:absolute;inset:0;border-radius:10px"></div>'; return; }
   if(typeof Chart==='undefined'){ throw new Error('Chart.js not loaded (CDN blocked?)'); }
-  const cvs=document.getElementById('yearChart'); const ctx=cvs.getContext('2d');
+  let cvs=document.getElementById('yearChart');
+  if(!cvs){ wrap.innerHTML='<canvas id="yearChart"></canvas>'; cvs=document.getElementById('yearChart'); }
+  const ctx=cvs.getContext('2d');
   const g=ctx.createLinearGradient(0,0,0,230); g.addColorStop(0,'#1ED760'); g.addColorStop(1,'#17B04E');
   // label only the first of each month so we avoid needing a date-adapter (category scale)
   const dates=days.map(d=>d.date);
@@ -599,6 +603,12 @@ function artHTML(name, img, round){
 function renderTaste(){
   // hero
   const h=document.getElementById('tasteHero');
+  if(!TOP_ARTIST.name){
+    h.innerHTML=`<span class="sk" style="width:120px;height:120px;border-radius:50%;flex:none"></span>
+      <div class="th-text"><span class="sk" style="display:block;width:130px;height:12px;margin-bottom:12px"></span>
+      <span class="sk" style="display:block;width:55%;height:44px;margin-bottom:12px"></span>
+      <span class="sk" style="display:block;width:150px;height:12px"></span></div>`;
+  } else {
   const bg = TOP_ARTIST.img ? `<div class="bgart" style="background-image:url('${TOP_ARTIST.img}')"></div>` : '';
   const photo = TOP_ARTIST.img
     ? `<div class="photo" style="background-image:url('${TOP_ARTIST.img}')"></div>`
@@ -607,35 +617,47 @@ function renderTaste(){
     <div class="th-text"><div class="k">Most played this year</div>
     <div class="nm">${TOP_ARTIST.name}</div>
     <div class="meta">${TOP_ARTIST.sub||''}</div></div>`;
+  }
 
   // songs
-  const s=document.getElementById('songs'); s.innerHTML='';
+  const s=document.getElementById('songs');
+  if(!SONGS.length){ s.innerHTML=skRows(8); } else {
+  s.innerHTML='';
   SONGS.forEach((r,i)=>{ const href=r[4]?`href="${r[4]}" target="_blank" rel="noopener"`:'';
     s.insertAdjacentHTML('beforeend',
     `<a class="row" ${href}><div class="rank">${i+1}</div>
      ${artHTML(r[0]+r[1], r[3])}
      <div class="rmeta"><div class="t">${r[0]}</div><div class="s">${r[1]}</div></div>
      ${r[2]?`<div class="rval">${r[2]} plays</div>`:''}</a>`); });
+  }
 
   // discovered
-  const d=document.getElementById('discovered'); d.innerHTML='';
+  const d=document.getElementById('discovered');
+  if(!DISCOVERED.length){ d.innerHTML=skRows(5); } else {
+  d.innerHTML='';
   DISCOVERED.forEach(r=>{ d.insertAdjacentHTML('beforeend',
     `<div class="row">
      ${artHTML(r[0], r[3], true)}
      <div class="rmeta"><div class="t">${r[0]}</div><div class="s">${r[1]}</div></div>
      ${r[2]?`<div class="rval">${r[2]} plays</div>`:''}</div>`); });
+  }
 
   // genres (shown as share of listening — works for minutes or artist-genre counts)
-  const g=document.getElementById('genres'); g.innerHTML='';
+  const g=document.getElementById('genres');
+  if(!GENRES.length){ g.innerHTML=skBars(6); } else {
+  g.innerHTML='';
   const max=Math.max(...GENRES.map(x=>x[1])), tot=GENRES.reduce((a,x)=>a+x[1],0)||1;
   GENRES.forEach(r=>{ const share=Math.round(r[1]/tot*100);
     g.insertAdjacentHTML('beforeend',
     `<div class="gbar"><div class="gl">${r[0]}</div>
      <div class="gtrack"><div class="gfill" style="width:${Math.round(r[1]/max*100)}%"></div></div>
      <div class="gval">${share}%</div></div>`); });
+  }
 
   // suggested
-  const su=document.getElementById('suggested'); su.innerHTML='';
+  const su=document.getElementById('suggested');
+  if(!SUGGESTED.length){ su.innerHTML=skTiles(4); return; }
+  su.innerHTML='';
   SUGGESTED.forEach(r=>{ const href=r[3]?`href="${r[3]}" target="_blank" rel="noopener"`:'';
     su.insertAdjacentHTML('beforeend',
     `<a class="scard" ${href}>${artHTML(r[0], r[2], true)}
@@ -644,6 +666,7 @@ function renderTaste(){
 
 function renderBadge(streak){
   const box=document.getElementById('badgeBox'); if(!box) return;
+  if(!state.days.length){ box.innerHTML='<span class="sk" style="width:100px;height:122px;border-radius:14px"></span>'; return; }
   const earned=BADGES.filter(b=>streak>=b.d); const cur=earned[earned.length-1];
   const main = cur
     ? `<img class="badgeimg" src="${cur.img}" alt="${cur.label} streak badge" title="${cur.label} badge — ${streak}-day streak">`
@@ -662,7 +685,10 @@ function openBadgeModal(streak){
 }
 function renderWrapped(){
   const el=document.getElementById('wrapped'); if(!el) return;
-  if(!WEEK){ el.className='wrapped'; el.innerHTML='<div style="color:var(--muted);text-align:center;padding:10px">Your Weekly Wrapped will appear here after your first week of listening.</div>'; return; }
+  if(!WEEK){ el.className='wrapped';
+    el.innerHTML=`<div class="wr-head"><div><span class="sk" style="display:block;width:120px;height:12px;margin-bottom:8px"></span><span class="sk" style="display:block;width:200px;height:24px"></span></div></div>
+      <div class="wr-grid">${'<div class="wr-stat"><span class="sk" style="display:block;width:70%;height:11px;margin-bottom:12px"></span><span class="sk" style="display:block;width:50%;height:28px"></span></div>'.repeat(4)}</div>`;
+    return; }
   const dr = WEEK.from ? (new Date(WEEK.from).toLocaleDateString(undefined,{month:'short',day:'numeric'})+' – '+new Date(WEEK.to).toLocaleDateString(undefined,{month:'short',day:'numeric'})) : 'This week';
   const locked=!WEEK.unlocked;
   el.className='wrapped'+(locked?' locked':'');
@@ -688,7 +714,9 @@ function renderHoursArt(){
   else { art.style.backgroundImage=''; lab.innerHTML=''; }
 }
 function renderAlbums(){
-  const box=document.getElementById('albums'); if(!box) return; box.innerHTML='';
+  const box=document.getElementById('albums'); if(!box) return;
+  if(!ALBUMS.length){ box.innerHTML=skAlbums(6); return; }
+  box.innerHTML='';
   ALBUMS.forEach(r=>{ const href=r[4]?`href="${r[4]}" target="_blank" rel="noopener"`:'';
     box.insertAdjacentHTML('beforeend',
     `<a class="album" ${href}>
