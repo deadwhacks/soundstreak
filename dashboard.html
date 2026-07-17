@@ -496,7 +496,7 @@ const state={ goal: parseInt(store.get('ss_goal',GOAL_DEFAULT),10)||GOAL_DEFAULT
 
 let SONGS=[], DISCOVERED=[], GENRES=[], SUGGESTED=[], ALBUMS=[];
 let TOP_ARTIST={name:'',sub:'',img:'',url:''};
-let NOW=null, ARTISTS_IMG={}, KNOWN=new Set(), SEEDS=[], SCROBBLE_ART={};
+let NOW=null, ARTISTS_IMG={}, KNOWN=new Set(), SEEDS=[], SCROBBLE_ART={}, SCROBBLE_ARTIST_ART={};
 let WEEK=null;
 const BADGES=[
   {d:1,img:'./badges/badge-1.png',label:'1 day'},
@@ -956,9 +956,10 @@ async function loadHero(){
   const arr=(j&&j.topartists&&j.topartists.artist)||[]; if(!arr.length) return;
   arr.forEach(a=>KNOWN.add(a.name.toLowerCase()));
   if(!SEEDS.length) SEEDS=arr.map(a=>a.name);
-  const top=arr[0]; let img=ARTISTS_IMG[top.name]||'', url='';
-  if(!img){ const info=await spSearchArtist(top.name); img=(info&&info.big)||''; url=(info&&info.url)||''; }
-  TOP_ARTIST={name:top.name, sub:(top.playcount?top.playcount+' plays this year':'Your top artist'), img, url};
+  const top=arr[0]; // Spotify top-artist photo → else that artist's album cover from scrobbles → else gradient
+  const img=ARTISTS_IMG[top.name]||SCROBBLE_ARTIST_ART[top.name.toLowerCase()]||'';
+  TOP_ARTIST={name:top.name, sub:(top.playcount?top.playcount+' plays this year':'Your top artist'),
+    img, url:'https://open.spotify.com/search/'+encodeURIComponent(top.name)};
 }
 
 /* New artists to check out = similar to your favorites, EXCLUDING anyone you already know */
@@ -985,7 +986,8 @@ async function loadSuggestions(){
   if(!ranked.length) return;
   const out=[];
   for(const name of ranked){ const info=await spSearchArtist(name);
-    out.push([name,'Similar to '+trim(seedOf[name]||'your taste',16),(info&&info.img)||'',(info&&info.url)||'']); }
+    out.push([name,'Similar to '+trim(seedOf[name]||'your taste',16),(info&&info.img)||'',
+      'https://open.spotify.com/search/'+encodeURIComponent(name)]); }
   SUGGESTED=out;
 }
 async function loadDiscovered(){
@@ -1004,14 +1006,16 @@ async function loadHistory(){
   // current week = Sunday 00:00 → next Sunday (Sun–Sat), local time
   const ws=new Date(); ws.setHours(0,0,0,0); ws.setDate(ws.getDate()-ws.getDay());
   const weekStart=ws.getTime(), weekEnd=weekStart+7*86400000;
-  const perDay={}; const wA={},wT={},wAl={}; let wPlays=0; let page=1,total=1; SCROBBLE_ART={};
+  const perDay={}; const wA={},wT={},wAl={}; let wPlays=0; let page=1,total=1; SCROBBLE_ART={}; SCROBBLE_ARTIST_ART={};
   while(page<=total && page<=20){
     const j=await lfm('user.getrecenttracks',{limit:200,from,page});
     const rt=j&&j.recenttracks; if(!rt) break;
     total=parseInt((rt['@attr']||{}).totalPages||'1',10);
     (rt.track||[]).forEach(t=>{
       const an=(t.artist||{})['#text']; if(an) KNOWN.add(an.toLowerCase()); // scrobbled = known
-      const _art=lfmImg(t.image); if(t.name&&_art){ const _k=t.name.toLowerCase()+'|'+(an||'').toLowerCase(); if(!SCROBBLE_ART[_k]) SCROBBLE_ART[_k]=_art; } // real album art from scrobbles
+      const _art=lfmImg(t.image); if(_art){ // real album art from scrobbles
+        if(t.name){ const _k=t.name.toLowerCase()+'|'+(an||'').toLowerCase(); if(!SCROBBLE_ART[_k]) SCROBBLE_ART[_k]=_art; }
+        if(an && !SCROBBLE_ARTIST_ART[an.toLowerCase()]) SCROBBLE_ARTIST_ART[an.toLowerCase()]=_art; }
       if(t['@attr']&&t['@attr'].nowplaying){ if(!NOW) NOW={name:t.name,artist:an||''}; return; }
       if(!t.date) return;
       const ts=t.date.uts*1000; const d=new Date(ts); d.setHours(0,0,0,0); perDay[d.getTime()]=(perDay[d.getTime()]||0)+1;
@@ -1063,13 +1067,9 @@ async function loadNowPlaying(){
     const r=await fetch(SP_API+'/me/player/currently-playing',{headers:{Authorization:'Bearer '+at}});
     if(r.status===204||!r.ok){ setNowPlaying(NOW_LAST); return; }
     const j=await r.json(); if(!j||!j.item){ setNowPlaying(NOW_LAST); return; }
+    const cover=(((j.item.album||{}).images||[])[0]||{}).url||'';
     const np={ name:j.item.name, artist:(j.item.artists||[]).map(a=>a.name).join(', '),
-      img:(((j.item.album||{}).images||[])[0]||{}).url||'',
-      url:((j.item.external_urls||{}).spotify)||'', playing:!!j.is_playing, artistImg:'' };
-    const primary=(j.item.artists||[])[0]; // artist profile photo (cached per artist)
-    if(primary){ const key=primary.name.toLowerCase();
-      if(NP_ART_CACHE[key]!==undefined){ np.artistImg=NP_ART_CACHE[key]; }
-      else { try{ const info=await spSearchArtist(primary.name); np.artistImg=(info&&info.big)||''; }catch(e){} NP_ART_CACHE[key]=np.artistImg; } }
+      img:cover, url:((j.item.external_urls||{}).spotify)||'', playing:!!j.is_playing, artistImg:cover };
     NOW_LAST=np; setNowPlaying(np);
   }catch(e){ /* transient network — keep last */ }
 }
@@ -1084,6 +1084,18 @@ function markLive(){
       ? 'Live data connected. Your streak & charts build daily from here — check back as history grows.'
       : 'Live data connected — powered by Spotify + Last.fm.'; }
 }
+// Diagnostic: fires one /search and reports the exact HTTP status + Retry-After in the footer.
+async function probeSearch(){
+  const at=await getToken(); if(!at) return;
+  const foot=document.getElementById('pageFoot');
+  try{
+    const r=await fetch(SP_API+'/search?type=artist&limit=1&q=radiohead',{headers:{Authorization:'Bearer '+at}});
+    const ra=r.headers.get('Retry-After');
+    const msg='Spotify /search → HTTP '+r.status+(r.ok?' ✓ working':'')+(ra?(' · Retry-After '+ra+'s ≈ '+Math.round(ra/60)+' min'):'');
+    if(foot){ foot.textContent=msg; foot.style.color='#F5A623'; foot.style.fontFamily='monospace'; }
+    console.log('[SoundStreak]',msg);
+  }catch(e){ if(foot) foot.textContent='Spotify /search probe → error: '+((e&&e.message)||e); }
+}
 async function hydrate(){
   setConnecting();
   const status=[];
@@ -1097,8 +1109,8 @@ async function hydrate(){
   await Promise.allSettled([ run('songs',loadTopSongs), run('hero',loadHero), run('albums',loadAlbums), run('genres',loadGenres) ]);
   state.live=true; state.loaded=true; render();
   loadNowPlaying(); if(!window.__npTimer) window.__npTimer=setInterval(loadNowPlaying,15000);
-  // suggestion photos use /search — run in the background so they never block the page
-  run('suggest',loadSuggestions).then(()=>render());
+  run('suggest',loadSuggestions).then(()=>render()); // real photos, background (best-effort)
+  probeSearch(); // diagnostic: proves /search status + Retry-After in the footer
   if(window.__ssErr&&window.__ssErr.length) console.warn('[SoundStreak] render issues:',window.__ssErr);
 }
 
