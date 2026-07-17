@@ -341,21 +341,25 @@ const CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="#0b0b0b" stroke-width=
 let yearChartRef=null;
 function render(){
   const {days,goal}=state;
-  // callouts
-  animateNum('streakNum',currentStreak(days,goal));
-  document.getElementById('longest').textContent=longestStreak(days,goal);
-  animateNum('yearHours',Math.round(yearMinutes(days)/60));
+  window.__ssErr=[];
+  const step=(name,fn)=>{ try{ fn(); }catch(e){ const m=name+': '+((e&&e.message)||e); window.__ssErr.push(m); console.error('[SoundStreak] render '+m,e); } };
 
-  // ring
-  const tm=todayMinutes(days); const pct=Math.min(100,Math.round(tm/goal*100));
-  const circ=2*Math.PI*78;
-  document.getElementById('ringFill').style.strokeDasharray=circ;
-  document.getElementById('ringFill').style.strokeDashoffset=circ*(1-pct/100);
-  document.getElementById('ringPct').textContent=pct+'%';
-  document.getElementById('todayMin').textContent=tm;
-  document.getElementById('goalMin').textContent=goal;
-
-  renderMonth(); renderYear(); renderTaste();
+  step('callouts',()=>{
+    animateNum('streakNum',currentStreak(days,goal));
+    document.getElementById('longest').textContent=longestStreak(days,goal);
+    animateNum('yearHours',Math.round(yearMinutes(days)/60));
+  });
+  step('ring',()=>{
+    const tm=todayMinutes(days); const pct=goal>0?Math.min(100,Math.round(tm/goal*100)):0;
+    const circ=2*Math.PI*78; const rf=document.getElementById('ringFill');
+    rf.style.strokeDasharray=circ; rf.style.strokeDashoffset=circ*(1-pct/100);
+    document.getElementById('ringPct').textContent=pct+'%';
+    document.getElementById('todayMin').textContent=tm;
+    document.getElementById('goalMin').textContent=goal;
+  });
+  step('month',renderMonth);
+  step('year',renderYear);
+  step('taste',renderTaste);
 }
 function animateNum(id,target){
   const el=document.getElementById(id); let n=0;
@@ -386,6 +390,7 @@ function renderMonth(){
 const MONTHS_ABBR=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 function renderYear(){
   const {days}=state;
+  if(typeof Chart==='undefined'){ throw new Error('Chart.js not loaded (CDN blocked?)'); }
   const cvs=document.getElementById('yearChart'); const ctx=cvs.getContext('2d');
   const g=ctx.createLinearGradient(0,0,0,230); g.addColorStop(0,'#13C3C5'); g.addColorStop(1,'#A459FF');
   // label only the first of each month so we avoid needing a date-adapter (category scale)
@@ -611,7 +616,8 @@ async function hydrate(){
   await Promise.allSettled([ run('profile',loadProfile), run('top',loadTop), run('discovered',loadDiscovered), run('history',loadHistory) ]);
   state.live=true; markLive(); render();
   const daysWithData=state.days.filter(d=>d.minutes>0).length;
-  const dbg=`DIAG — top artist: ${TOP_ARTIST.name} · songs: ${SONGS.length} · genres: ${GENRES.length} · days>0: ${daysWithData} · [${status.join(' | ')}]`;
+  const renderErrs=(window.__ssErr||[]).join('; ')||'none';
+  const dbg=`DIAG — top artist: ${TOP_ARTIST.name} · songs: ${SONGS.length} · genres: ${GENRES.length} · days>0: ${daysWithData} · loaders:[${status.join(' | ')}] · renderErrs:[${renderErrs}]`;
   const foot=document.querySelector('.foot'); if(foot){ foot.textContent=dbg; foot.style.color='#F5A623'; foot.style.fontFamily='monospace'; }
   console.log('[SoundStreak]',dbg);
 }
