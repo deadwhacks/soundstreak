@@ -7,7 +7,7 @@
 <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   @font-face{
@@ -16,40 +16,41 @@
     font-weight:700; font-display:swap;
   }
   :root{
-    --blue:#13C3C5; --violet:#A459FF;
-    --bg:#0E0F12; --bg-2:#121317; --surface:#17181D; --surface-2:#1E2027;
-    --line:#262931; --line-2:#31353F;
+    --green:#1ED760; --green-2:#17B04E;
+    --blue:#1ED760; --violet:#17B04E; /* legacy aliases now map to green */
+    --bg:#0B0C0E; --bg-2:#111317; --surface:#16181C; --surface-2:#1E2126;
+    --line:#24272E; --line-2:#32363F;
     --text:#F4F5F7; --muted:#9AA0AA; --muted-2:#6B7079;
-    --grad:linear-gradient(135deg,var(--blue),var(--violet));
-    --display:'BBH Hegarty','Space Grotesk','Manrope',sans-serif;
+    --grad:linear-gradient(135deg,var(--green),var(--green-2));
+    --display:'BBH Hegarty','Bricolage Grotesque','Poppins',sans-serif;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html{scroll-behavior:smooth}
-  body{background:var(--bg);color:var(--text);font-family:'Manrope',system-ui,sans-serif;
+  body{background:var(--bg);color:var(--text);font-family:'Poppins',system-ui,sans-serif;
     letter-spacing:-.02em;line-height:1.5;-webkit-font-smoothing:antialiased}
   a{color:inherit;text-decoration:none}
   .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
-  .display{font-family:var(--display);letter-spacing:0}
+  .display{font-family:var(--display);letter-spacing:-.02em}
   .grad-text{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 
   /* nav */
   nav{position:sticky;top:0;z-index:40;background:rgba(14,15,18,.72);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
   .navrow{display:flex;align-items:center;justify-content:space-between;height:70px}
-  .logo{height:25px;display:block}
+  .logo{height:38px;display:block}
   .navright{display:flex;align-items:center;gap:16px}
   .pill{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);
     background:var(--surface);border:1px solid var(--line);padding:7px 13px;border-radius:999px}
-  .dot{width:8px;height:8px;border-radius:50%;background:var(--blue);box-shadow:0 0 0 3px rgba(19,195,197,.18)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(30,215,96,.18)}
   .avatar{width:34px;height:34px;border-radius:50%;background:var(--grad);display:flex;align-items:center;
     justify-content:center;font-weight:800;font-size:14px;color:#0b0b0b}
-  .connectbtn{cursor:pointer;font-family:'Manrope',sans-serif;font-weight:700;font-size:13px;color:#04211f;
+  .connectbtn{cursor:pointer;font-family:'Poppins',sans-serif;font-weight:700;font-size:13px;color:#04211f;
     background:var(--blue);border:none;padding:9px 16px;border-radius:999px;transition:transform .1s}
   .connectbtn:hover{transform:translateY(-1px)}
   .art[style*="url"],.photo[style*="url"]{background-size:cover;background-position:center}
 
   /* section title */
   .kicker{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.14em;font-weight:700}
-  .h-sec{font-family:'Manrope',sans-serif;font-weight:800;letter-spacing:-.03em;font-size:24px;margin:6px 0 2px}
+  .h-sec{font-family:var(--display);font-weight:800;letter-spacing:-.02em;font-size:30px;margin:6px 0 2px}
 
   .card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px}
   .card h3{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:16px}
@@ -61,7 +62,7 @@
   .callout .glow{position:absolute;width:220px;height:220px;filter:blur(80px);opacity:.22;border-radius:50%;top:-70px;right:-40px}
   .callout .lab{position:relative;color:var(--muted);font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px}
   .callout .num{position:relative;font-family:var(--display);font-weight:700;font-size:96px;line-height:.92;margin-top:6px}
-  .callout .unit{font-size:30px;color:var(--muted);margin-left:8px;font-family:'Manrope',sans-serif;font-weight:700;letter-spacing:-.02em}
+  .callout .unit{font-size:30px;color:var(--muted);margin-left:8px;font-family:'Poppins',sans-serif;font-weight:700;letter-spacing:-.02em}
   .callout .foot{position:relative;color:var(--muted);font-size:13.5px;margin-top:10px}
   .up{color:var(--blue);font-weight:700}
 
@@ -97,14 +98,14 @@
   .goallabel{font-size:13.5px;color:var(--muted);margin-top:16px}
   .goallabel b{color:var(--text)}
   .setbtn{margin-top:14px;cursor:pointer;border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);
-    font-family:'Manrope',sans-serif;font-weight:700;font-size:13.5px;padding:10px 18px;border-radius:999px;transition:border-color .15s,transform .1s}
+    font-family:'Poppins',sans-serif;font-weight:700;font-size:13.5px;padding:10px 18px;border-radius:999px;transition:border-color .15s,transform .1s}
   .setbtn:hover{border-color:var(--blue);transform:translateY(-1px)}
 
   /* ===== music taste ===== */
   .taste-hero{position:relative;overflow:hidden;border-radius:20px;border:1px solid var(--line-2);
     padding:30px;margin-bottom:18px;display:flex;align-items:center;gap:26px;
-    background:radial-gradient(120% 160% at 100% 0%, rgba(164,89,255,.28), rgba(19,195,197,.08) 45%, transparent 70%), var(--surface)}
-  .taste-hero .photo{width:120px;height:120px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(120% 160% at 100% 0%, rgba(30,215,96,.22), rgba(30,215,96,.05) 45%, transparent 70%), var(--surface)}
+  .taste-hero .photo{position:relative;z-index:1;width:120px;height:120px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;
     font-family:var(--display);font-weight:700;font-size:44px;color:#0b0b0b;box-shadow:0 14px 40px -12px rgba(0,0,0,.6)}
   .taste-hero .k{color:var(--blue);font-size:12px;text-transform:uppercase;letter-spacing:.16em;font-weight:700}
   .taste-hero .nm{font-family:var(--display);font-weight:700;font-size:clamp(34px,5vw,58px);line-height:.95;margin:6px 0}
@@ -154,12 +155,36 @@
   .goalfield input{width:90px;background:var(--surface-2);border:1px solid var(--line-2);color:#fff;border-radius:10px;padding:11px;font-size:16px;text-align:center;font-weight:700}
   .goalfield label{color:var(--muted);font-size:14px}
   .modalbtns{display:flex;gap:10px;justify-content:flex-end}
-  .mbtn{cursor:pointer;border:none;font-family:'Manrope',sans-serif;font-weight:700;font-size:14px;padding:11px 20px;border-radius:999px}
+  .mbtn{cursor:pointer;border:none;font-family:'Poppins',sans-serif;font-weight:700;font-size:14px;padding:11px 20px;border-radius:999px}
   .mbtn.ghost{background:transparent;color:var(--muted);border:1px solid var(--line-2)}
   .mbtn.save{background:var(--grad);color:#0b0b0b}
 
   .foot{color:var(--muted-2);font-size:12px;margin:34px 0 60px;text-align:center;line-height:1.7}
   .callout-sub{color:var(--muted);font-size:13.5px;margin-top:10px;position:relative}
+
+  /* ===== now playing banner ===== */
+  .np{display:flex;align-items:center;gap:18px;margin:26px 0 4px;padding:16px 22px;border-radius:18px;cursor:pointer;
+    border:1px solid var(--line-2);text-decoration:none;color:var(--text);
+    background:linear-gradient(90deg, rgba(30,215,96,.16), rgba(30,215,96,.03) 55%, transparent), var(--surface);
+    transition:transform .12s ease, border-color .15s}
+  .np:hover{transform:translateY(-2px);border-color:var(--green)}
+  .np-art{width:66px;height:66px;border-radius:12px;flex:none;background:var(--surface-2) center/cover no-repeat;box-shadow:0 10px 30px -10px rgba(0,0,0,.6)}
+  .np-meta{flex:1;min-width:0}
+  .np-lab{display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.16em;color:var(--green);font-weight:700}
+  .np-title{font-family:var(--display);font-weight:800;letter-spacing:-.02em;font-size:23px;line-height:1.1;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .np-artist{color:var(--muted);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+  .np-open{flex:none;color:var(--muted);font-size:12.5px;font-weight:600}
+  .eq{display:inline-flex;align-items:flex-end;gap:2px;height:11px}
+  .eq span{width:3px;height:4px;background:var(--green);border-radius:1px;animation:eq .9s ease-in-out infinite}
+  .eq span:nth-child(2){animation-delay:.15s}.eq span:nth-child(3){animation-delay:.35s}.eq span:nth-child(4){animation-delay:.5s}
+  @keyframes eq{0%,100%{height:4px}50%{height:11px}}
+  @media(max-width:620px){.np-open{display:none}}
+
+  /* faded artist image on the Most Played hero */
+  .taste-hero .bgart{position:absolute;top:0;right:0;bottom:0;width:64%;background-position:center 20%;background-size:cover;
+    -webkit-mask-image:linear-gradient(to right, transparent 0%, #000 90%);mask-image:linear-gradient(to right, transparent 0%, #000 90%);
+    opacity:.5;pointer-events:none;z-index:0}
+  .taste-hero .th-text{position:relative;z-index:1;flex:1;min-width:0}
 </style>
 </head>
 <body>
@@ -177,6 +202,17 @@
 </nav>
 
 <div class="wrap">
+
+  <!-- ===== NOW PLAYING ===== -->
+  <a id="npBanner" class="np" style="display:none" target="_blank" rel="noopener">
+    <div class="np-art" id="npArt"></div>
+    <div class="np-meta">
+      <div class="np-lab" id="npLab">Now playing</div>
+      <div class="np-title" id="npTitle">—</div>
+      <div class="np-artist" id="npArtist"></div>
+    </div>
+    <div class="np-open">Open in Spotify →</div>
+  </a>
 
   <!-- ===== TOP CALLOUTS ===== -->
   <div class="callouts">
@@ -203,7 +239,7 @@
       <div class="mgrid" id="mgrid"></div>
       <div class="glegend">
         <span><i style="background:var(--surface-2)"></i>Missed</span>
-        <span><i style="background:linear-gradient(135deg,#13C3C5,#A459FF)"></i>Goal hit</span>
+        <span><i style="background:linear-gradient(135deg,#1ED760,#17B04E)"></i>Goal hit</span>
       </div>
     </div>
 
@@ -218,7 +254,7 @@
                     stroke-linecap="round" stroke-dasharray="490" stroke-dashoffset="490"
                     style="transition:stroke-dashoffset .6s cubic-bezier(.2,.7,.2,1)"/>
             <defs><linearGradient id="rg" x1="0" y1="0" x2="180" y2="180" gradientUnits="userSpaceOnUse">
-              <stop stop-color="#13C3C5"/><stop offset="1" stop-color="#A459FF"/></linearGradient></defs>
+              <stop stop-color="#1ED760"/><stop offset="1" stop-color="#17B04E"/></linearGradient></defs>
           </svg>
           <div class="ringc"><div class="p" id="ringPct">0%</div><div class="s">of goal</div></div>
         </div>
@@ -393,7 +429,7 @@ function renderYear(){
   const {days}=state;
   if(typeof Chart==='undefined'){ throw new Error('Chart.js not loaded (CDN blocked?)'); }
   const cvs=document.getElementById('yearChart'); const ctx=cvs.getContext('2d');
-  const g=ctx.createLinearGradient(0,0,0,230); g.addColorStop(0,'#13C3C5'); g.addColorStop(1,'#A459FF');
+  const g=ctx.createLinearGradient(0,0,0,230); g.addColorStop(0,'#1ED760'); g.addColorStop(1,'#17B04E');
   // label only the first of each month so we avoid needing a date-adapter (category scale)
   const dates=days.map(d=>d.date);
   const labels=dates.map(d=>d.getDate()===1?MONTHS_ABBR[d.getMonth()]:'');
@@ -419,11 +455,12 @@ function artHTML(name, img, round){
 function renderTaste(){
   // hero
   const h=document.getElementById('tasteHero');
+  const bg = TOP_ARTIST.img ? `<div class="bgart" style="background-image:url('${TOP_ARTIST.img}')"></div>` : '';
   const photo = TOP_ARTIST.img
     ? `<div class="photo" style="background-image:url('${TOP_ARTIST.img}')"></div>`
     : `<div class="photo" style="background:${grad(TOP_ARTIST.name)}">${initials(TOP_ARTIST.name)}</div>`;
-  h.innerHTML=`${photo}
-    <div><div class="k">Most played this year</div>
+  h.innerHTML=`${bg}${photo}
+    <div class="th-text"><div class="k">Most played this year</div>
     <div class="nm">${TOP_ARTIST.name}</div>
     <div class="meta">${TOP_ARTIST.sub||''}</div></div>`;
 
@@ -597,11 +634,39 @@ async function loadHistory(){
   state.days=days;
 }
 
+/* ---- now playing (Spotify currently-playing, polled live) ---- */
+let NOW_LAST=null;
+function setNowPlaying(np){
+  const b=document.getElementById('npBanner'); if(!b) return;
+  if(!np){ b.style.display='none'; return; }
+  b.style.display='flex';
+  document.getElementById('npArt').style.backgroundImage = np.img?`url('${np.img}')`:'';
+  document.getElementById('npTitle').textContent = np.name;
+  document.getElementById('npArtist').textContent = np.artist;
+  document.getElementById('npLab').innerHTML = np.playing
+    ? '<span class="eq"><span></span><span></span><span></span><span></span></span> Now playing'
+    : 'Last played';
+  if(np.url) b.href=np.url; else b.removeAttribute('href');
+  const ct=document.getElementById('connText'); if(ct) ct.textContent = np.playing ? ('♪ '+trim(np.name,18)) : 'Connected';
+}
+async function loadNowPlaying(){
+  const at=await getToken(); if(!at) return;
+  try{
+    const r=await fetch(SP_API+'/me/player/currently-playing',{headers:{Authorization:'Bearer '+at}});
+    if(r.status===204||!r.ok){ setNowPlaying(NOW_LAST); return; }
+    const j=await r.json(); if(!j||!j.item){ setNowPlaying(NOW_LAST); return; }
+    const np={ name:j.item.name, artist:(j.item.artists||[]).map(a=>a.name).join(', '),
+      img:(((j.item.album||{}).images||[])[0]||{}).url||'',
+      url:((j.item.external_urls||{}).spotify)||'', playing:!!j.is_playing };
+    NOW_LAST=np; setNowPlaying(np);
+  }catch(e){ /* transient network — keep last */ }
+}
+
 /* ---- UI state ---- */
 function setConnecting(){document.getElementById('connText').textContent='Loading…';}
 function markLive(){
   const btn=document.getElementById('connectBtn'); if(btn) btn.style.display='none';
-  document.getElementById('connText').textContent = NOW ? ('♪ '+trim(NOW.name,20)) : 'Connected';
+  document.getElementById('connText').textContent = 'Connected';
   const foot=document.getElementById('pageFoot');
   if(foot){ const days=state.days.filter(d=>d.minutes>0).length;
     foot.textContent = days<14
@@ -616,6 +681,7 @@ async function hydrate(){
   // allSettled = wait for every loader (a failure in one no longer aborts the rest or renders early)
   await Promise.allSettled([ run('profile',loadProfile), run('top',loadTop), run('discovered',loadDiscovered), run('history',loadHistory) ]);
   state.live=true; markLive(); render();
+  loadNowPlaying(); if(!window.__npTimer) window.__npTimer=setInterval(loadNowPlaying,15000);
   if(window.__ssErr&&window.__ssErr.length) console.warn('[SoundStreak] render issues:',window.__ssErr);
 }
 
