@@ -206,6 +206,58 @@
   @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
   @media(prefers-reduced-motion:reduce){#bg{animation:none}.callouts,.charts{animation:none}
     .card,.taste-hero{transition:none}.card:hover,.taste-hero:hover{transform:none}}
+
+  /* hero artist name = all caps */
+  .taste-hero .nm{text-transform:uppercase}
+
+  /* ===== streak badge ===== */
+  .callout.has-badge{padding-right:172px}
+  .badgebox{position:absolute;top:50%;right:22px;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;z-index:3}
+  .badgeimg{height:134px;width:auto;object-fit:contain;filter:drop-shadow(0 12px 26px rgba(0,0,0,.55));animation:badgein .55s cubic-bezier(.2,.8,.2,1) both}
+  @keyframes badgein{from{opacity:0;transform:scale(.82) translateY(6px)}to{opacity:1}}
+  .badge-none{height:120px;width:98px;border-radius:14px;border:2px dashed var(--line-2);display:flex;align-items:center;justify-content:center;text-align:center;color:var(--muted-2);font-size:11px;padding:10px}
+  .badge-info{position:relative;cursor:default;color:var(--muted);font-size:11px;display:flex;align-items:center;gap:5px}
+  .badge-info .i{width:15px;height:15px;border-radius:50%;border:1px solid var(--muted-2);display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-style:italic}
+  .badge-pop{position:absolute;bottom:calc(100% + 12px);right:-8px;width:min(560px,78vw);background:var(--surface);border:1px solid var(--line-2);border-radius:16px;padding:18px;box-shadow:0 30px 70px -28px rgba(0,0,0,.85);z-index:60;display:none;text-align:left}
+  .badge-info:hover .badge-pop{display:block}
+  .badge-pop .pt{font-weight:800;font-size:14px;margin-bottom:4px}
+  .badge-pop .pd{color:var(--muted);font-size:12.5px;margin-bottom:14px}
+  .btl{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px}
+  .btl .b{flex:none;width:62px;text-align:center;opacity:.32;transition:opacity .2s}
+  .btl .b.earned{opacity:1}
+  .btl .b img{height:56px;width:auto;object-fit:contain}
+  .btl .b .l{font-size:10px;color:var(--muted);margin-top:5px;line-height:1.15}
+  @media(max-width:640px){.callout.has-badge{padding-right:28px}.badgebox{position:static;transform:none;flex-direction:row;margin-top:16px}.badgeimg{height:84px}}
+
+  /* ===== weekly wrapped ===== */
+  .wrapped{position:relative;overflow:hidden;border:1px solid var(--line-2);border-radius:20px;padding:24px 26px;
+    background:radial-gradient(120% 150% at 100% 0%, rgba(30,215,96,.16), transparent 55%), var(--surface)}
+  .wr-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px}
+  .wr-title{font-family:var(--display);font-weight:800;letter-spacing:-.02em;font-size:26px;margin-top:2px}
+  .wr-badge{flex:none;font-size:12.5px;font-weight:700;color:var(--green);border:1px solid rgba(30,215,96,.4);border-radius:999px;padding:6px 13px}
+  .wr-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  @media(max-width:760px){.wr-grid{grid-template-columns:1fr 1fr}}
+  .wr-stat{background:var(--surface-2);border:1px solid var(--line);border-radius:14px;padding:16px;min-height:104px}
+  .wr-k{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:700}
+  .wr-v{font-family:var(--display);font-weight:800;font-size:34px;letter-spacing:-.02em;margin-top:6px}
+  .wr-v.sm{font-size:19px;line-height:1.15;margin-top:8px;word-break:break-word}
+  .wr-s{color:var(--muted);font-size:12.5px;margin-top:3px}
+  .wrapped.locked .wr-body{filter:blur(9px);opacity:.4;pointer-events:none;user-select:none}
+  .wr-lock{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;text-align:center}
+  .wr-lockmsg{max-width:440px;background:rgba(11,12,14,.74);backdrop-filter:blur(3px);border:1px solid var(--line-2);border-radius:16px;padding:20px 24px;font-size:15px;line-height:1.6}
+  .wr-lockmsg span{color:var(--muted);font-size:13px}
+
+  /* ===== top albums ===== */
+  .albums{display:grid;grid-template-columns:repeat(6,1fr);gap:14px}
+  @media(max-width:900px){.albums{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:520px){.albums{grid-template-columns:repeat(2,1fr)}}
+  .album{display:block;text-decoration:none;color:inherit}
+  .album-cover{aspect-ratio:1;border-radius:12px;background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;
+    font-family:var(--display);font-weight:800;font-size:22px;color:#0b0b0b;box-shadow:0 12px 30px -16px rgba(0,0,0,.6);transition:transform .18s ease}
+  .album:hover .album-cover{transform:translateY(-5px) scale(1.03)}
+  .album-t{font-size:13.5px;font-weight:700;margin-top:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .album-a{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .album-p{font-size:11.5px;color:var(--muted-2);margin-top:2px}
 </style>
 </head>
 <body>
@@ -239,11 +291,12 @@
 
   <!-- ===== TOP CALLOUTS ===== -->
   <div class="callouts">
-    <div class="card callout">
+    <div class="card callout has-badge">
       <div class="glow" style="background:var(--blue)"></div>
       <div class="lab">🔥 Current streak</div>
       <div class="num grad-text"><span id="streakNum">0</span><span class="unit" style="-webkit-text-fill-color:var(--muted)"> days</span></div>
       <div class="callout-sub">Longest this year: <b id="longest" style="color:#fff">0</b> days — keep it alive</div>
+      <div class="badgebox" id="badgeBox"></div>
     </div>
     <div class="card callout">
       <div class="glow" style="background:var(--violet)"></div>
@@ -293,6 +346,13 @@
     </div>
   </div>
 
+  <!-- ===== WEEKLY WRAPPED ===== -->
+  <div style="margin:34px 0 16px">
+    <div class="kicker">Every week counts</div>
+    <div class="h-sec">Your Weekly Wrapped</div>
+  </div>
+  <div id="wrapped" class="wrapped"></div>
+
   <!-- ===== MUSIC TASTE ===== -->
   <div style="margin:34px 0 16px">
     <div class="kicker">Your year in music</div>
@@ -320,6 +380,13 @@
       <div class="sugg" id="suggested"></div>
     </div>
   </div>
+
+  <!-- ===== TOP ALBUMS ===== -->
+  <div style="margin:34px 0 16px">
+    <div class="kicker">On repeat</div>
+    <div class="h-sec">Top albums this year</div>
+  </div>
+  <div class="albums" id="albums"></div>
 
   <div class="foot" id="pageFoot">
     Running on sample data — connect Spotify to see your own.
@@ -383,6 +450,18 @@ let SUGGESTED=[
 ];
 let TOP_ARTIST={name:"Alison Wonderland",sub:'92 plays · top track "Church"',img:""};
 let NOW=null, ARTISTS_IMG={}, KNOWN=new Set(), SEEDS=[];
+let WEEK=null;
+let ALBUMS=[["WHACK'S MUSEUM","Tierra Whack",51,"",""],["Detour","Samara Cyn",14,"",""],["GNX","Kendrick Lamar",22,"",""],["Cry Baby","Vince Staples",9,"",""],["IGOR","Tyler, The Creator",7,"",""],["Melophobia","Cage The Elephant",6,"",""]];
+const BADGES=[
+  {d:1,img:'./badges/badge-1.png',label:'1 day'},
+  {d:7,img:'./badges/badge-7.png',label:'1 week'},
+  {d:30,img:'./badges/badge-30.png',label:'1 month'},
+  {d:90,img:'./badges/badge-90.png',label:'3 months'},
+  {d:180,img:'./badges/badge-180.png',label:'6 months'},
+  {d:270,img:'./badges/badge-270.png',label:'9 months'},
+  {d:365,img:'./badges/badge-365.png',label:'1 year'},
+  {d:730,img:'./badges/badge-730.png',label:'2 years'},
+];
 
 /* ---------- generative cover art (deterministic from name) ---------- */
 function hue(str){let h=0;for(const c of str)h=(h*31+c.charCodeAt(0))%360;return h;}
@@ -420,6 +499,9 @@ function render(){
   step('month',renderMonth);
   step('year',renderYear);
   step('taste',renderTaste);
+  step('badge',()=>renderBadge(currentStreak(days,goal)));
+  step('wrapped',renderWrapped);
+  step('albums',renderAlbums);
 }
 function animateNum(id,target){
   const el=document.getElementById(id); let n=0;
@@ -521,6 +603,51 @@ function renderTaste(){
      <div><div class="t">${r[0]}</div><div class="s">${r[1]}</div></div></a>`); });
 }
 
+function renderBadge(streak){
+  const box=document.getElementById('badgeBox'); if(!box) return;
+  const earned=BADGES.filter(b=>streak>=b.d); const cur=earned[earned.length-1];
+  const main = cur
+    ? `<img class="badgeimg" src="${cur.img}" alt="${cur.label} streak badge" title="${cur.label} badge — ${streak}-day streak">`
+    : `<div class="badge-none">Start a streak to earn your first badge</div>`;
+  const tl = BADGES.map(b=>`<div class="b ${streak>=b.d?'earned':''}"><img src="${b.img}" alt=""><div class="l">${b.label}</div></div>`).join('');
+  box.innerHTML = `${main}
+    <div class="badge-info"><span class="i">i</span> Streak badges
+      <div class="badge-pop"><div class="pt">Streak badges</div>
+        <div class="pd">The longer your streak, the better the badge. Break your streak and you start over from none.</div>
+        <div class="btl">${tl}</div></div>
+    </div>`;
+}
+function renderWrapped(){
+  const el=document.getElementById('wrapped'); if(!el) return;
+  if(!WEEK){ el.className='wrapped'; el.innerHTML='<div style="color:var(--muted);text-align:center;padding:10px">Your Weekly Wrapped will appear here after your first week of listening.</div>'; return; }
+  const dr = WEEK.from ? (new Date(WEEK.from).toLocaleDateString(undefined,{month:'short',day:'numeric'})+' – '+new Date(WEEK.to).toLocaleDateString(undefined,{month:'short',day:'numeric'})) : 'This week';
+  const locked=!WEEK.unlocked;
+  el.className='wrapped'+(locked?' locked':'');
+  el.innerHTML=`
+    <div class="wr-head">
+      <div><div class="kicker" style="color:var(--green)">Week of ${dr}</div>
+        <div class="wr-title">${locked?'Wrapped locked':'Wrapped unlocked 🎉'}</div></div>
+      <div class="wr-badge">${WEEK.goalDays||0}/7 goal days</div>
+    </div>
+    <div class="wr-body"><div class="wr-grid">
+      <div class="wr-stat"><div class="wr-k">Listened</div><div class="wr-v">${Math.round((WEEK.plays||0)*3.5)}</div><div class="wr-s">minutes</div></div>
+      <div class="wr-stat"><div class="wr-k">Top artist</div><div class="wr-v sm">${WEEK.artist||'—'}</div></div>
+      <div class="wr-stat"><div class="wr-k">Top track</div><div class="wr-v sm">${WEEK.track||'—'}</div><div class="wr-s">${WEEK.trackArtist||''}</div></div>
+      <div class="wr-stat"><div class="wr-k">Top album</div><div class="wr-v sm">${WEEK.album||'—'}</div></div>
+    </div></div>
+    ${locked?`<div class="wr-lock"><div class="wr-lockmsg">🔒 Hit your daily goal <b>every day this week</b> to unlock your Weekly Wrapped.<br><span>${WEEK.goalDays||0} of 7 goal days so far — keep your streak alive.</span></div></div>`:''}`;
+}
+function renderAlbums(){
+  const box=document.getElementById('albums'); if(!box) return; box.innerHTML='';
+  ALBUMS.forEach(r=>{ const href=r[4]?`href="${r[4]}" target="_blank" rel="noopener"`:'';
+    box.insertAdjacentHTML('beforeend',
+    `<a class="album" ${href}>
+       <div class="album-cover" style="${r[3]?`background-image:url('${r[3]}')`:`background:${grad(r[0]+r[1])}`}">${r[3]?'':initials(r[0])}</div>
+       <div class="album-t">${r[0]}</div><div class="album-a">${r[1]}</div>
+       ${r[2]?`<div class="album-p">${r[2]} plays</div>`:''}
+     </a>`); });
+}
+
 /* ---------- goal modal ---------- */
 const overlay=document.getElementById('overlay'), goalInput=document.getElementById('goalInput');
 const PRESETS=[30,60,90,120];
@@ -600,6 +727,8 @@ function img(arr){ // pick a usable last.fm image (skip empty), avoid the placeh
   if(!arr) return ''; const u=(arr[arr.length-1]||{})['#text']||'';
   return u.includes('2a96cbd8b46e442fc41c2b86b821562f')?'':u;
 }
+function lfmImg(arr){ if(!arr) return ''; const m={}; arr.forEach(x=>m[x.size]=x['#text']);
+  const u=m.extralarge||m.large||m.medium||''; return u.includes('2a96cbd8b46e442fc41c2b86b821562f')?'':u; }
 
 /* ---- loaders ---- */
 async function loadProfile(){
@@ -703,6 +832,29 @@ async function loadHistory(){
   state.days=days;
 }
 
+/* ---- top albums (Last.fm, real cover art) ---- */
+async function loadAlbums(){
+  const j=await lfm('user.gettopalbums',{period:'12month',limit:6});
+  const arr=(j&&j.topalbums&&j.topalbums.album)||[]; if(!arr.length) return;
+  ALBUMS=arr.map(a=>[a.name,(a.artist||{}).name||'',(a.playcount||''),lfmImg(a.image),
+    'https://open.spotify.com/search/'+encodeURIComponent(a.name+' '+((a.artist||{}).name||''))]);
+}
+/* ---- weekly wrapped (Last.fm weekly charts, gated by hitting your goal every day) ---- */
+async function loadWeekly(){
+  const [aw,tw,alw]=await Promise.all([
+    lfm('user.getweeklyartistchart',{}), lfm('user.getweeklytrackchart',{}), lfm('user.getweeklyalbumchart',{})]);
+  const A=(aw&&aw.weeklyartistchart)||{}, T=(tw&&tw.weeklytrackchart)||{}, L=(alw&&alw.weeklyalbumchart)||{};
+  const artists=A.artist||[], tracks=T.track||[], albums=L.album||[];
+  const at=A['@attr']||{}; const from=parseInt(at.from||0,10)*1000, to=parseInt(at.to||0,10)*1000;
+  const plays=tracks.reduce((s,t)=>s+(parseInt(t.playcount||0,10)||0),0);
+  let goalDays=0;
+  state.days.forEach(d=>{ const t=d.date.getTime();
+    if(from&&to&&t>=from-43200000&&t<=to+43200000&&d.minutes>=state.goal) goalDays++; });
+  WEEK={ from,to,plays, artist:(artists[0]||{}).name||'', track:(tracks[0]||{}).name||'',
+    trackArtist:((tracks[0]||{}).artist||{}).name||'', album:(albums[0]||{}).name||'',
+    goalDays, unlocked: goalDays>=7 };
+}
+
 /* ---- now playing (Spotify currently-playing, polled live) ---- */
 let NOW_LAST=null;
 function setNowPlaying(np){
@@ -752,7 +904,7 @@ async function hydrate(){
   await Promise.allSettled([ run('profile',loadProfile), run('seeds',loadTasteSeeds), run('discovered',loadDiscovered), run('history',loadHistory) ]);
   markLive(); render();
   // 2) accurate play-count data (Last.fm) + Spotify artwork, then suggestions (need KNOWN + seeds)
-  await Promise.allSettled([ run('songs',loadTopSongs), run('hero',loadHero) ]);
+  await Promise.allSettled([ run('songs',loadTopSongs), run('hero',loadHero), run('albums',loadAlbums), run('weekly',loadWeekly) ]);
   await run('suggest',loadSuggestions);
   state.live=true; render();
   loadNowPlaying(); if(!window.__npTimer) window.__npTimer=setInterval(loadNowPlaying,15000);
