@@ -168,9 +168,9 @@
   <div class="wrap navrow">
     <a href="./index.html"><img class="logo" src="./SoundStreakLogoDarkMode.svg" alt="SoundStreak" /></a>
     <div class="navright">
-      <button class="connectbtn" id="connectBtn">Connect Spotify</button>
-      <span class="pill"><span class="dot" id="connDot"></span><span id="connText">Sample data</span></span>
+      <span class="pill"><span class="dot" id="connDot"></span><span id="connText">Connecting…</span></span>
       <div class="avatar" id="avatar">J</div>
+      <button class="connectbtn" id="logoutBtn" style="background:var(--surface-2);color:#fff;border:1px solid var(--line-2)">Log out</button>
     </div>
   </div>
 </nav>
@@ -481,7 +481,7 @@ const CONFIG={
 const SP_ACCOUNTS='https://accounts.spotify.com';
 const SP_API='https://api.spotify.com/v1';
 const LFM='https://ws.audioscrobbler.com/2.0/';
-const REDIRECT=location.origin+location.pathname;
+const REDIRECT=location.origin+'/dashboard'; // matches Spotify redirect URI + Cloudflare clean URL
 
 const cap=s=>String(s).replace(/\b\w/g,c=>c.toUpperCase());
 const trim=(s,n)=>s.length>n?s.slice(0,n-1)+'…':s;
@@ -609,13 +609,14 @@ async function hydrate(){
   state.live=true; markLive(); render();
 }
 
-/* ---------- init ---------- */
-render(); // sample preview until connected
-document.getElementById('connectBtn').onclick=spotifyLogin;
+/* ---------- init (dashboard is gated: no auth -> back to landing) ---------- */
+const logoutBtn=document.getElementById('logoutBtn');
+if(logoutBtn) logoutBtn.onclick=()=>{ ['ss_at','ss_rt','ss_exp','ss_verifier'].forEach(k=>store.set(k,'')); location.replace('./index.html'); };
 (async ()=>{
   const code=new URLSearchParams(location.search).get('code');
-  if(code){ history.replaceState({},document.title,REDIRECT); const at=await exchangeCode(code); if(at){ await hydrate(); return; } }
-  if(await getToken()) await hydrate();
+  if(code){ history.replaceState({},document.title,REDIRECT); render(); const at=await exchangeCode(code); if(at){ await hydrate(); return; } }
+  if(store.get('ss_rt','')||store.get('ss_at','')){ render(); if(await getToken()){ await hydrate(); return; } }
+  location.replace('./index.html'); // not signed in
 })();
 </script>
 </body>
