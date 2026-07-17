@@ -842,9 +842,33 @@ async function loadTasteSeeds(){
   ARTISTS_IMG={};
   ar.items.forEach(a=>{ ARTISTS_IMG[a.name]=((a.images||[])[0]||{}).url||''; KNOWN.add(a.name.toLowerCase()); });
   SEEDS=ar.items.slice(0,5).map(a=>a.name);
-  const g={}; ar.items.forEach(a=>(a.genres||[]).forEach(x=>{g[x]=(g[x]||0)+1;}));
-  const gg=Object.entries(g).sort((a,b)=>b[1]-a[1]).slice(0,6);
-  if(gg.length) GENRES=gg.map(([n,c])=>[cap(n),c]);
+}
+
+/* Real genres from Last.fm community tags on your most-played artists, weighted by play count.
+   (Spotify's artist genres field returns empty, so this is the reliable source.) */
+const TAG_BLOCK=new Set(['seen live','favorites','favourite','favourites','favorite','love','loved','beautiful','awesome','cool','good','great','male vocalists','female vocalists','vocalist','american','british','uk','usa','us','united states','england','english','canadian','australian','german','french','spotify','myspotigrambot','under 2000 listeners','songs','music','favorite songs','my favorite','favourite songs','singer-songwriter']);
+function isGenreTag(n){ const s=n.toLowerCase().trim();
+  if(TAG_BLOCK.has(s)) return false;
+  if(/^\d{2,4}s?$/.test(s)) return false;   // decades/years: 90s, 2010s, 10s, 2020
+  return true; }
+function fmtGenre(n){ const map={'rnb':'R&B','r&b':'R&B','hip hop':'Hip-Hop','hiphop':'Hip-Hop','edm':'EDM','dnb':'Drum & Bass','idm':'IDM'};
+  const k=n.toLowerCase(); if(map[k]) return map[k];
+  return n.replace(/\b\w/g,c=>c.toUpperCase()); }
+async function loadGenres(){
+  const j=await lfm('user.gettopartists',{period:'12month',limit:10});
+  const artists=(j&&j.topartists&&j.topartists.artist)||[]; if(!artists.length) return;
+  const results=await Promise.all(artists.map(async a=>{
+    const p=new URLSearchParams({method:'artist.gettoptags',artist:a.name,api_key:CONFIG.lastfmKey,format:'json',autocorrect:1});
+    const r=await fetch(LFM+'?'+p.toString()); if(!r.ok) return null; const jj=await r.json();
+    return {pc:parseInt(a.playcount||1,10)||1, tags:((jj.toptags&&jj.toptags.tag)||[])}; }));
+  const score={}, label={};
+  results.forEach(res=>{ if(!res) return;
+    res.tags.forEach(t=>{ const c=parseInt(t.count||0,10)||0; if(c<10||!isGenreTag(t.name)) return;
+      const key=t.name.toLowerCase().replace(/[^a-z0-9]/g,'');
+      score[key]=(score[key]||0)+res.pc*c;
+      if(!label[key]||c>label[key].c) label[key]={name:t.name,c}; }); });
+  const top=Object.entries(score).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  if(top.length) GENRES=top.map(([k,v])=>[fmtGenre(label[k].name), v]);
 }
 
 /* Most-played THIS YEAR from real Last.fm play counts, artwork via Spotify */
@@ -998,7 +1022,7 @@ async function hydrate(){
   await Promise.allSettled([ run('profile',loadProfile), run('seeds',loadTasteSeeds), run('discovered',loadDiscovered), run('history',loadHistory) ]);
   markLive(); render();
   // 2) accurate play-count data (Last.fm) + Spotify artwork, then suggestions (need KNOWN + seeds)
-  await Promise.allSettled([ run('songs',loadTopSongs), run('hero',loadHero), run('albums',loadAlbums), run('weekly',loadWeekly) ]);
+  await Promise.allSettled([ run('songs',loadTopSongs), run('hero',loadHero), run('albums',loadAlbums), run('weekly',loadWeekly), run('genres',loadGenres) ]);
   await run('suggest',loadSuggestions);
   state.live=true; render();
   loadNowPlaying(); if(!window.__npTimer) window.__npTimer=setInterval(loadNowPlaying,15000);
