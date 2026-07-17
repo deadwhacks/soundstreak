@@ -25,23 +25,25 @@ async function getAppToken(env){
 export async function onRequestGet(context){
   const env = context.env, kv = env.SETTINGS;
   const H = { 'content-type':'application/json', 'cache-control':'public, max-age=86400' };
+  const HN = { 'content-type':'application/json' };
   const name = new URL(context.request.url).searchParams.get('name');
   if(!name) return new Response(JSON.stringify({ img:'' }), { headers:H });
 
   const cacheKey = 'artimg:' + name.toLowerCase();
-  if(kv){ const c = await kv.get(cacheKey); if(c !== null && c !== undefined) return new Response(JSON.stringify({ img:c }), { headers:H }); }
+  if(kv){ const c = await kv.get(cacheKey); if(c) return new Response(JSON.stringify({ img:c, cached:true }), { headers:H }); } // trust only non-empty cache (self-heals bad empties)
 
   const token = await getAppToken(env);
-  if(!token) return new Response(JSON.stringify({ error:'server not configured (SPOTIFY_SECRET)' }), { status:500, headers:{ 'content-type':'application/json' } });
+  if(!token) return new Response(JSON.stringify({ error:'server not configured (SPOTIFY_SECRET)' }), { status:500, headers:HN });
 
   const norm = s => String(s).toLowerCase().replace(/[^a-z0-9]/g,'');
-  let img = '', ok = false;
+  let img = '', status = 0, n = 0, matched = '';
   try{
-    const sr = await fetch('https://api.spotify.com/v1/search?type=artist&limit=8&q=' + encodeURIComponent(name), { headers:{ Authorization:'Bearer '+token } });
-    if(sr.ok){ ok = true; const sj = await sr.json(); const items = (sj.artists && sj.artists.items) || [];
-      const a = items.find(x => norm(x.name) === norm(name)); // exact match only
-      if(a) img = ((a.images||[])[0]||{}).url || ''; }
-  }catch(e){}
-  if(kv && ok) await kv.put(cacheKey, img); // cache result (incl. confirmed "no match"); skip caching on failure
-  return new Response(JSON.stringify({ img }), { headers: ok ? H : { 'content-type':'application/json' } });
+    const sr = await fetch('https://api.spotify.com/v1/search?type=artist&limit=10&market=US&q=' + encodeURIComponent(name), { headers:{ Authorization:'Bearer '+token } });
+    status = sr.status;
+    if(sr.ok){ const sj = await sr.json(); const items = (sj.artists && sj.artists.items) || []; n = items.length;
+      const a = items.find(x => norm(x.name) === norm(name)) || items[0]; // exact match, else the top result
+      if(a){ img = ((a.images||[])[0]||{}).url || ''; matched = a.name; } }
+  }catch(e){ status = -1; }
+  if(kv && img) await kv.put(cacheKey, img); // only cache real (non-empty) images
+  return new Response(JSON.stringify({ img, status, n, matched }), { headers: img ? H : HN });
 }
