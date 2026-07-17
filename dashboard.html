@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SoundStreak — Dashboard</title>
+<link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @font-face{
+    font-family:'BBH Hegarty';
+    src:url('./BBHHegarty.woff2') format('woff2'), url('./BBHHegarty.otf') format('opentype');
+    font-weight:700; font-display:swap;
+  }
+  :root{
+    --blue:#13C3C5; --violet:#A459FF;
+    --bg:#0E0F12; --bg-2:#121317; --surface:#17181D; --surface-2:#1E2027;
+    --line:#262931; --line-2:#31353F;
+    --text:#F4F5F7; --muted:#9AA0AA; --muted-2:#6B7079;
+    --grad:linear-gradient(135deg,var(--blue),var(--violet));
+    --display:'BBH Hegarty','Space Grotesk','Manrope',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--text);font-family:'Manrope',system-ui,sans-serif;
+    letter-spacing:-.02em;line-height:1.5;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+  .display{font-family:var(--display);letter-spacing:0}
+  .grad-text{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+  /* nav */
+  nav{position:sticky;top:0;z-index:40;background:rgba(14,15,18,.72);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .navrow{display:flex;align-items:center;justify-content:space-between;height:70px}
+  .logo{height:25px;display:block}
+  .navright{display:flex;align-items:center;gap:16px}
+  .pill{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);
+    background:var(--surface);border:1px solid var(--line);padding:7px 13px;border-radius:999px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--blue);box-shadow:0 0 0 3px rgba(19,195,197,.18)}
+  .avatar{width:34px;height:34px;border-radius:50%;background:var(--grad);display:flex;align-items:center;
+    justify-content:center;font-weight:800;font-size:14px;color:#0b0b0b}
+
+  /* section title */
+  .kicker{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.14em;font-weight:700}
+  .h-sec{font-family:'Manrope',sans-serif;font-weight:800;letter-spacing:-.03em;font-size:24px;margin:6px 0 2px}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px}
+  .card h3{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:16px}
+
+  /* ===== top callouts ===== */
+  .callouts{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:26px 0 18px}
+  @media(max-width:760px){.callouts{grid-template-columns:1fr}}
+  .callout{position:relative;overflow:hidden;padding:30px 28px}
+  .callout .glow{position:absolute;width:220px;height:220px;filter:blur(80px);opacity:.22;border-radius:50%;top:-70px;right:-40px}
+  .callout .lab{position:relative;color:var(--muted);font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px}
+  .callout .num{position:relative;font-family:var(--display);font-weight:700;font-size:96px;line-height:.92;margin-top:6px}
+  .callout .unit{font-size:30px;color:var(--muted);margin-left:8px;font-family:'Manrope',sans-serif;font-weight:700;letter-spacing:-.02em}
+  .callout .foot{position:relative;color:var(--muted);font-size:13.5px;margin-top:10px}
+  .up{color:var(--blue);font-weight:700}
+
+  /* ===== charts row ===== */
+  .charts{display:grid;grid-template-columns:1.15fr .85fr 1.5fr;gap:18px;margin-bottom:18px}
+  @media(max-width:1040px){.charts{grid-template-columns:1fr 1fr}.chart-year{grid-column:1/-1}}
+  @media(max-width:680px){.charts{grid-template-columns:1fr}}
+  /* fixed-height wrapper stops Chart.js from expanding infinitely */
+  .chart-box{position:relative;height:230px;width:100%}
+  .chart-box canvas{position:absolute;inset:0}
+
+  /* month grid */
+  .monthhead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px}
+  .monthhead .m{font-family:var(--display);font-weight:700;font-size:18px}
+  .monthhead .c{font-size:12.5px;color:var(--muted)}
+  .mgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:7px}
+  .box{aspect-ratio:1;border-radius:8px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;
+    position:relative;font-size:11px;color:var(--muted-2)}
+  .box.hit{background:var(--grad)}
+  .box.hit svg{width:14px;height:14px}
+  .box.today{outline:2px solid var(--blue);outline-offset:1px}
+  .box.future{opacity:.35}
+  .glegend{display:flex;gap:16px;margin-top:14px;font-size:12px;color:var(--muted)}
+  .glegend i{width:12px;height:12px;border-radius:4px;display:inline-block;vertical-align:-2px;margin-right:6px}
+
+  /* goal ring */
+  .ringwrap{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;height:100%}
+  .ring{position:relative;width:180px;height:180px}
+  .ring svg{transform:rotate(-90deg)}
+  .ringc{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .ringc .p{font-family:var(--display);font-weight:700;font-size:40px}
+  .ringc .s{font-size:12.5px;color:var(--muted)}
+  .goallabel{font-size:13.5px;color:var(--muted);margin-top:16px}
+  .goallabel b{color:var(--text)}
+  .setbtn{margin-top:14px;cursor:pointer;border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);
+    font-family:'Manrope',sans-serif;font-weight:700;font-size:13.5px;padding:10px 18px;border-radius:999px;transition:border-color .15s,transform .1s}
+  .setbtn:hover{border-color:var(--blue);transform:translateY(-1px)}
+
+  /* ===== music taste ===== */
+  .taste-hero{position:relative;overflow:hidden;border-radius:20px;border:1px solid var(--line-2);
+    padding:30px;margin-bottom:18px;display:flex;align-items:center;gap:26px;
+    background:radial-gradient(120% 160% at 100% 0%, rgba(164,89,255,.28), rgba(19,195,197,.08) 45%, transparent 70%), var(--surface)}
+  .taste-hero .photo{width:120px;height:120px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;
+    font-family:var(--display);font-weight:700;font-size:44px;color:#0b0b0b;box-shadow:0 14px 40px -12px rgba(0,0,0,.6)}
+  .taste-hero .k{color:var(--blue);font-size:12px;text-transform:uppercase;letter-spacing:.16em;font-weight:700}
+  .taste-hero .nm{font-family:var(--display);font-weight:700;font-size:clamp(34px,5vw,58px);line-height:.95;margin:6px 0}
+  .taste-hero .meta{color:var(--muted);font-size:14.5px}
+  @media(max-width:620px){.taste-hero{flex-direction:column;text-align:center}}
+
+  .taste-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:760px){.taste-grid{grid-template-columns:1fr}}
+
+  .row{display:flex;align-items:center;gap:13px;padding:9px 0;border-bottom:1px solid var(--line)}
+  .row:last-child{border-bottom:none}
+  .rank{font-family:var(--display);font-weight:700;font-size:15px;color:var(--muted-2);width:20px;flex:none;text-align:center}
+  .art{width:44px;height:44px;border-radius:9px;flex:none;display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:15px;color:#0b0b0b;overflow:hidden}
+  .art.round{border-radius:50%}
+  .rmeta{flex:1;min-width:0}
+  .rmeta .t{font-size:14.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rmeta .s{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rval{font-size:12.5px;color:var(--muted);flex:none;text-align:right;font-variant-numeric:tabular-nums}
+  .tag{display:inline-block;font-size:11px;color:var(--blue);border:1px solid var(--line-2);border-radius:999px;padding:2px 9px;margin-top:3px}
+
+  /* genre bars */
+  .gbar{display:flex;align-items:center;gap:12px;margin-bottom:13px;font-size:13.5px}
+  .gbar .gl{width:96px;flex:none;color:#e6e6e6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gtrack{flex:1;height:9px;background:var(--surface-2);border-radius:999px;overflow:hidden}
+  .gfill{height:100%;border-radius:999px;background:var(--grad)}
+  .gval{width:56px;text-align:right;color:var(--muted);flex:none;font-variant-numeric:tabular-nums}
+
+  /* suggested cards */
+  .sugg{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  .scard{display:flex;gap:12px;align-items:center;background:var(--surface-2);border:1px solid var(--line);border-radius:14px;padding:12px;transition:border-color .15s,transform .12s}
+  .scard:hover{border-color:var(--line-2);transform:translateY(-2px)}
+  .scard .t{font-size:14px;font-weight:700}
+  .scard .s{font-size:12px;color:var(--muted);margin-top:2px}
+
+  /* modal */
+  .overlay{position:fixed;inset:0;background:rgba(6,7,9,.72);backdrop-filter:blur(4px);z-index:100;display:none;align-items:center;justify-content:center;padding:20px}
+  .overlay.show{display:flex}
+  .modal{background:var(--surface);border:1px solid var(--line-2);border-radius:20px;padding:28px;width:100%;max-width:380px;animation:pop .2s ease}
+  @keyframes pop{from{opacity:0;transform:scale(.96) translateY(6px)}to{opacity:1;transform:none}}
+  .modal h3{font-size:18px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px;text-transform:none;color:var(--text)}
+  .modal p{color:var(--muted);font-size:13.5px;margin-bottom:18px}
+  .presets{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+  .preset{cursor:pointer;border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);border-radius:999px;padding:8px 15px;font-size:13.5px;font-weight:600}
+  .preset.active{background:var(--grad);color:#0b0b0b;border-color:transparent}
+  .goalfield{display:flex;align-items:center;gap:10px;margin-bottom:22px}
+  .goalfield input{width:90px;background:var(--surface-2);border:1px solid var(--line-2);color:#fff;border-radius:10px;padding:11px;font-size:16px;text-align:center;font-weight:700}
+  .goalfield label{color:var(--muted);font-size:14px}
+  .modalbtns{display:flex;gap:10px;justify-content:flex-end}
+  .mbtn{cursor:pointer;border:none;font-family:'Manrope',sans-serif;font-weight:700;font-size:14px;padding:11px 20px;border-radius:999px}
+  .mbtn.ghost{background:transparent;color:var(--muted);border:1px solid var(--line-2)}
+  .mbtn.save{background:var(--grad);color:#0b0b0b}
+
+  .foot{color:var(--muted-2);font-size:12px;margin:34px 0 60px;text-align:center;line-height:1.7}
+</style>
+</head>
+<body>
+
+<!-- nav -->
+<nav>
+  <div class="wrap navrow">
+    <a href="./index.html"><img class="logo" src="./SoundStreakLogoDarkMode.svg" alt="SoundStreak" /></a>
+    <div class="navright">
+      <span class="pill"><span class="dot"></span><span id="connText">Sample data</span></span>
+      <div class="avatar">J</div>
+    </div>
+  </div>
+</nav>
+
+<div class="wrap">
+
+  <!-- ===== TOP CALLOUTS ===== -->
+  <div class="callouts">
+    <div class="card callout">
+      <div class="glow" style="background:var(--blue)"></div>
+      <div class="lab">🔥 Current streak</div>
+      <div class="num grad-text"><span id="streakNum">0</span><span class="unit" style="-webkit-text-fill-color:var(--muted)"> days</span></div>
+      <div class="foot">Longest this year: <b id="longest" style="color:#fff">0</b> days — keep it alive</div>
+    </div>
+    <div class="card callout">
+      <div class="glow" style="background:var(--violet)"></div>
+      <div class="lab">🎧 Hours listened this year</div>
+      <div class="num grad-text"><span id="yearHours">0</span><span class="unit" style="-webkit-text-fill-color:var(--muted)"> hrs</span></div>
+      <div class="foot"><span class="up" id="pace">▲</span> <span id="paceTxt">on pace for your best year yet</span></div>
+    </div>
+  </div>
+
+  <!-- ===== CHARTS ===== -->
+  <div class="charts">
+    <!-- month goal grid -->
+    <div class="card">
+      <h3>Goals hit this month</h3>
+      <div class="monthhead"><span class="m" id="monthName">Month</span><span class="c" id="monthCount">0 / 0</span></div>
+      <div class="mgrid" id="mgrid"></div>
+      <div class="glegend">
+        <span><i style="background:var(--surface-2)"></i>Missed</span>
+        <span><i style="background:linear-gradient(135deg,#13C3C5,#A459FF)"></i>Goal hit</span>
+      </div>
+    </div>
+
+    <!-- goal ring -->
+    <div class="card">
+      <h3>Today's goal</h3>
+      <div class="ringwrap">
+        <div class="ring">
+          <svg width="180" height="180" viewBox="0 0 180 180">
+            <circle cx="90" cy="90" r="78" stroke="#1E2027" stroke-width="15" fill="none"/>
+            <circle id="ringFill" cx="90" cy="90" r="78" stroke="url(#rg)" stroke-width="15" fill="none"
+                    stroke-linecap="round" stroke-dasharray="490" stroke-dashoffset="490"
+                    style="transition:stroke-dashoffset .6s cubic-bezier(.2,.7,.2,1)"/>
+            <defs><linearGradient id="rg" x1="0" y1="0" x2="180" y2="180" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#13C3C5"/><stop offset="1" stop-color="#A459FF"/></linearGradient></defs>
+          </svg>
+          <div class="ringc"><div class="p" id="ringPct">0%</div><div class="s">of goal</div></div>
+        </div>
+        <div class="goallabel"><b id="todayMin">0</b> of <b id="goalMin">60</b> min today</div>
+        <button class="setbtn" id="openModal">Set daily goal</button>
+      </div>
+    </div>
+
+    <!-- year bar chart -->
+    <div class="card chart-year">
+      <h3>Listening across the year</h3>
+      <div class="chart-box"><canvas id="yearChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ===== MUSIC TASTE ===== -->
+  <div style="margin:34px 0 16px">
+    <div class="kicker">Your year in music</div>
+    <div class="h-sec">The taste you've built</div>
+  </div>
+
+  <!-- most played hero -->
+  <div class="taste-hero" id="tasteHero"></div>
+
+  <div class="taste-grid">
+    <div class="card">
+      <h3>Most played songs this year</h3>
+      <div id="songs"></div>
+    </div>
+    <div class="card">
+      <h3>New artists you discovered</h3>
+      <div id="discovered"></div>
+    </div>
+    <div class="card">
+      <h3>Top genres by playtime</h3>
+      <div id="genres"></div>
+    </div>
+    <div class="card">
+      <h3>New artists to check out</h3>
+      <div class="sugg" id="suggested"></div>
+    </div>
+  </div>
+
+  <div class="foot">
+    Running on sample data. Song/artist covers are generated placeholders — real album art &amp; artist photos load from Spotify once connected.
+  </div>
+</div>
+
+<!-- goal modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h3>Set your daily goal</h3>
+    <p>How many minutes of listening counts as a win each day?</p>
+    <div class="presets" id="presets"></div>
+    <div class="goalfield"><input id="goalInput" type="number" min="5" step="5" value="60" /><label>minutes / day</label></div>
+    <div class="modalbtns">
+      <button class="mbtn ghost" id="cancelGoal">Cancel</button>
+      <button class="mbtn save" id="saveGoal">Save goal</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- tiny guarded storage (works locally, degrades safely) ---------- */
+const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:v;}catch(e){return d;}},
+  set(k,v){try{localStorage.setItem(k,v);}catch(e){}}};
+
+/* ---------- sample data ---------- */
+function seeded(s){return function(){s=(s*1664525+1013904223)%4294967296;return s/4294967296;};}
+const rnd=seeded(20260717);
+const today=new Date(); today.setHours(0,0,0,0);
+const GOAL_DEFAULT=60;
+
+function buildDays(){
+  const days=[]; const start=new Date(today.getFullYear(),0,1);
+  for(let d=new Date(start); d<=today; d.setDate(d.getDate()+1)){
+    const daysAgo=Math.round((today-d)/86400000);
+    const dow=d.getDay(); const weekend=(dow===0||dow===6)?40:0;
+    let min=Math.round(45+weekend+rnd()*80);
+    if(rnd()<0.14) min=Math.round(rnd()*40);          // some low/miss days
+    if(daysAgo<=18 && daysAgo>=1) min=Math.round(70+rnd()*70); // last 18 days: solid (streak)
+    if(daysAgo===19) min=22;                          // break before that
+    if(daysAgo===0) min=34;                           // today: in progress
+    days.push({date:new Date(d),minutes:min});
+  }
+  return days;
+}
+const state={ goal: parseInt(store.get('ss_goal',GOAL_DEFAULT),10)||GOAL_DEFAULT, days: buildDays() };
+
+const SONGS=[
+  ["Church","Alison Wonderland",92],["Midnight City","M83",81],["Innerbloom","RÜFÜS DU SOL",76],
+  ["Kerala","Bonobo",68],["Genesis","Grimes",61],["Runaway","Kanye West",57],
+  ["Losing It","FISHER",55],["Tadow","Masego",49],
+];
+const DISCOVERED=[
+  ["Alison Wonderland","Feb 2026",92],["FISHER","Apr 2026",55],["Masego","Mar 2026",49],
+  ["Fred again..","May 2026",44],["Sofia Kourtesis","Jun 2026",31],
+];
+const GENRES=[["Electronic",5820],["Indie",3910],["House",3120],["Hip-Hop",2450],["Ambient",1360],["Jazz",980]];
+const SUGGESTED=[
+  ["Anfisa Letyago","Because you like FISHER"],["ANOTR","From your House rotation"],
+  ["Jamie xx","Fans of Bonobo love this"],["KAYTRANADA","Based on Masego"],
+];
+const TOP_ARTIST={name:"Alison Wonderland",plays:92,track:"Church"};
+
+/* ---------- generative cover art (deterministic from name) ---------- */
+function hue(str){let h=0;for(const c of str)h=(h*31+c.charCodeAt(0))%360;return h;}
+function grad(str){const a=hue(str),b=(a+50)%360;return `linear-gradient(135deg,hsl(${a} 68% 56%),hsl(${b} 62% 46%))`;}
+function initials(str){return str.split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase();}
+
+/* ---------- metrics ---------- */
+function currentStreak(days,goal){let i=days.length-1;if(days[i].minutes<goal)i--;let s=0;for(;i>=0;i--){if(days[i].minutes>=goal)s++;else break;}return s;}
+function longestStreak(days,goal){let b=0,c=0;for(const d of days){if(d.minutes>=goal){c++;b=Math.max(b,c);}else c=0;}return b;}
+function yearMinutes(days){return days.reduce((a,d)=>a+d.minutes,0);}
+function todayMinutes(days){return days[days.length-1].minutes;}
+const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+const CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="#0b0b0b" stroke-width="3.4"><path d="M5 12l4 4 10-10" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+/* ---------- render ---------- */
+let yearChartRef=null;
+function render(){
+  const {days,goal}=state;
+  // callouts
+  animateNum('streakNum',currentStreak(days,goal));
+  document.getElementById('longest').textContent=longestStreak(days,goal);
+  animateNum('yearHours',Math.round(yearMinutes(days)/60));
+
+  // ring
+  const tm=todayMinutes(days); const pct=Math.min(100,Math.round(tm/goal*100));
+  const circ=2*Math.PI*78;
+  document.getElementById('ringFill').style.strokeDasharray=circ;
+  document.getElementById('ringFill').style.strokeDashoffset=circ*(1-pct/100);
+  document.getElementById('ringPct').textContent=pct+'%';
+  document.getElementById('todayMin').textContent=tm;
+  document.getElementById('goalMin').textContent=goal;
+
+  renderMonth(); renderYear(); renderTaste();
+}
+function animateNum(id,target){
+  const el=document.getElementById(id); let n=0;
+  const step=Math.max(1,Math.round(target/28));
+  const t=setInterval(()=>{n+=step;if(n>=target){n=target;clearInterval(t);}el.textContent=n;},22);
+}
+
+function renderMonth(){
+  const {days,goal}=state;
+  const y=today.getFullYear(), m=today.getMonth();
+  const dim=new Date(y,m+1,0).getDate();
+  document.getElementById('monthName').textContent=MONTHS[m];
+  const byDay={}; days.forEach(d=>{if(d.date.getFullYear()===y&&d.date.getMonth()===m)byDay[d.date.getDate()]=d.minutes;});
+  const grid=document.getElementById('mgrid'); grid.innerHTML=''; let hits=0;
+  for(let day=1;day<=dim;day++){
+    const el=document.createElement('div'); el.className='box';
+    const mins=byDay[day];
+    if(day===today.getDate()) el.classList.add('today');
+    if(mins===undefined){ el.classList.add('future'); el.textContent=day; }
+    else if(mins>=goal){ el.classList.add('hit'); el.innerHTML=CHECK; hits++; el.title=day+': '+mins+' min'; }
+    else { el.textContent=day; el.title=day+': '+mins+' min'; }
+    grid.appendChild(el);
+  }
+  const elapsed=Object.keys(byDay).length;
+  document.getElementById('monthCount').textContent=hits+' / '+elapsed+' days';
+}
+
+const MONTHS_ABBR=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function renderYear(){
+  const {days}=state;
+  const cvs=document.getElementById('yearChart'); const ctx=cvs.getContext('2d');
+  const g=ctx.createLinearGradient(0,0,0,230); g.addColorStop(0,'#13C3C5'); g.addColorStop(1,'#A459FF');
+  // label only the first of each month so we avoid needing a date-adapter (category scale)
+  const dates=days.map(d=>d.date);
+  const labels=dates.map(d=>d.getDate()===1?MONTHS_ABBR[d.getMonth()]:'');
+  const data=days.map(d=>d.minutes);
+  if(yearChartRef) yearChartRef.destroy();
+  yearChartRef=new Chart(ctx,{type:'bar',
+    data:{labels,datasets:[{data,backgroundColor:g,borderRadius:2,barPercentage:1,categoryPercentage:1}]},
+    options:{maintainAspectRatio:false,plugins:{legend:{display:false},
+      tooltip:{callbacks:{title:items=>dates[items[0].dataIndex].toLocaleDateString(undefined,{month:'short',day:'numeric'}),
+        label:c=>c.parsed.y+' min'}}},
+      scales:{x:{grid:{display:false},
+        ticks:{color:'#6B7079',autoSkip:false,maxRotation:0,font:{size:10},
+          callback:function(v,i){return labels[i]||null;}}},
+        y:{grid:{color:'#1E2027'},ticks:{color:'#6B7079',font:{size:10}},beginAtZero:true}}}
+  });
+}
+
+function renderTaste(){
+  // hero
+  const h=document.getElementById('tasteHero');
+  h.innerHTML=`<div class="photo" style="background:${grad(TOP_ARTIST.name)}">${initials(TOP_ARTIST.name)}</div>
+    <div><div class="k">Most played this year</div>
+    <div class="nm">${TOP_ARTIST.name}</div>
+    <div class="meta">${TOP_ARTIST.plays} plays · top track "${TOP_ARTIST.track}"</div></div>`;
+
+  // songs
+  const s=document.getElementById('songs'); s.innerHTML='';
+  SONGS.forEach((r,i)=>{ s.insertAdjacentHTML('beforeend',
+    `<div class="row"><div class="rank">${i+1}</div>
+     <div class="art" style="background:${grad(r[0]+r[1])}">${initials(r[0])}</div>
+     <div class="rmeta"><div class="t">${r[0]}</div><div class="s">${r[1]}</div></div>
+     <div class="rval">${r[2]} plays</div></div>`); });
+
+  // discovered
+  const d=document.getElementById('discovered'); d.innerHTML='';
+  DISCOVERED.forEach(r=>{ d.insertAdjacentHTML('beforeend',
+    `<div class="row">
+     <div class="art round" style="background:${grad(r[0])}">${initials(r[0])}</div>
+     <div class="rmeta"><div class="t">${r[0]}</div><div class="s">♥ Liked · discovered ${r[1]}</div></div>
+     <div class="rval">${r[2]} plays</div></div>`); });
+
+  // genres
+  const g=document.getElementById('genres'); g.innerHTML=''; const max=Math.max(...GENRES.map(x=>x[1]));
+  GENRES.forEach(r=>{ const hrs=(r[1]/60).toFixed(0);
+    g.insertAdjacentHTML('beforeend',
+    `<div class="gbar"><div class="gl">${r[0]}</div>
+     <div class="gtrack"><div class="gfill" style="width:${Math.round(r[1]/max*100)}%"></div></div>
+     <div class="gval">${hrs} hrs</div></div>`); });
+
+  // suggested
+  const su=document.getElementById('suggested'); su.innerHTML='';
+  SUGGESTED.forEach(r=>{ su.insertAdjacentHTML('beforeend',
+    `<div class="scard"><div class="art round" style="background:${grad(r[0])}">${initials(r[0])}</div>
+     <div><div class="t">${r[0]}</div><div class="s">${r[1]}</div></div></div>`); });
+}
+
+/* ---------- goal modal ---------- */
+const overlay=document.getElementById('overlay'), goalInput=document.getElementById('goalInput');
+const PRESETS=[30,60,90,120];
+function buildPresets(){
+  const box=document.getElementById('presets'); box.innerHTML='';
+  PRESETS.forEach(v=>{ const b=document.createElement('div'); b.className='preset'+(v===state.goal?' active':'');
+    b.textContent=v+' min'; b.onclick=()=>{goalInput.value=v;markPreset(v);}; box.appendChild(b); });
+}
+function markPreset(v){document.querySelectorAll('.preset').forEach(p=>p.classList.toggle('active',p.textContent===v+' min'));}
+document.getElementById('openModal').onclick=()=>{goalInput.value=state.goal;buildPresets();overlay.classList.add('show');};
+document.getElementById('cancelGoal').onclick=()=>overlay.classList.remove('show');
+overlay.onclick=e=>{if(e.target===overlay)overlay.classList.remove('show');};
+goalInput.oninput=()=>markPreset(parseInt(goalInput.value,10));
+document.getElementById('saveGoal').onclick=()=>{
+  const v=parseInt(goalInput.value,10); if(v>0){state.goal=v;store.set('ss_goal',v);render();}
+  overlay.classList.remove('show');
+};
+
+/* ---------- init ---------- */
+render();
+</script>
+</body>
+</html>
