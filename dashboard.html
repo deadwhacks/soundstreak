@@ -275,6 +275,15 @@
   .bcell-l{font-family:var(--display);font-weight:700;font-size:14px;margin-top:8px}
   .bcell-d{font-size:11px;color:var(--muted);margin-top:2px}
   .bcell.got .bcell-d{color:var(--green);font-weight:700}
+
+  /* faded artist image on the Hours callout */
+  .callout .lab,.callout .num,.callout .callout-sub{position:relative;z-index:1}
+  .callout-art{position:absolute;top:0;right:0;bottom:0;width:55%;background-size:cover;background-position:center 20%;
+    -webkit-mask-image:linear-gradient(to right, transparent, #000 88%);mask-image:linear-gradient(to right, transparent, #000 88%);
+    opacity:.5;z-index:0;pointer-events:none}
+  .callout-art-lab{position:absolute;right:22px;bottom:20px;text-align:right;z-index:2}
+  .callout-art-lab .k{font-size:10px;text-transform:uppercase;letter-spacing:.16em;color:var(--green);font-weight:700}
+  .callout-art-lab .n{font-family:var(--display);font-weight:800;font-size:19px;letter-spacing:-.02em;text-transform:uppercase;margin-top:2px}
 </style>
 </head>
 <body>
@@ -315,11 +324,13 @@
       <div class="callout-sub">Longest this year: <b id="longest" style="color:#fff">0</b> days — keep it alive</div>
       <div class="badgebox" id="badgeBox"></div>
     </div>
-    <div class="card callout">
+    <div class="card callout has-art">
       <div class="glow" style="background:var(--violet)"></div>
       <div class="lab">🎧 Hours listened this year</div>
       <div class="num grad-text"><span id="yearHours">0</span><span class="unit" style="-webkit-text-fill-color:var(--muted)"> hrs</span></div>
       <div class="callout-sub"><span class="up" id="pace">▲</span> <span id="paceTxt">tracking since you connected</span></div>
+      <div class="callout-art" id="hoursArt"></div>
+      <div class="callout-art-lab" id="hoursArtLab"></div>
     </div>
   </div>
 
@@ -363,6 +374,13 @@
     </div>
   </div>
 
+  <!-- ===== TOP ALBUMS ===== -->
+  <div style="margin:34px 0 16px">
+    <div class="kicker">On repeat</div>
+    <div class="h-sec">YOUR TOP ALBUMS</div>
+  </div>
+  <div class="albums" id="albums"></div>
+
   <!-- ===== WEEKLY WRAPPED ===== -->
   <div style="margin:34px 0 16px">
     <div class="kicker">Every week counts</div>
@@ -397,13 +415,6 @@
       <div class="sugg" id="suggested"></div>
     </div>
   </div>
-
-  <!-- ===== TOP ALBUMS ===== -->
-  <div style="margin:34px 0 16px">
-    <div class="kicker">On repeat</div>
-    <div class="h-sec">YOUR TOP ALBUMS</div>
-  </div>
-  <div class="albums" id="albums"></div>
 
   <div class="foot" id="pageFoot">
     Running on sample data — connect Spotify to see your own.
@@ -527,6 +538,7 @@ function render(){
   step('year',renderYear);
   step('taste',renderTaste);
   step('badge',()=>renderBadge(currentStreak(days,goal)));
+  step('hoursart',renderHoursArt);
   step('wrapped',renderWrapped);
   step('albums',renderAlbums);
 }
@@ -667,6 +679,13 @@ function renderWrapped(){
       <div class="wr-stat"><div class="wr-k">Top album</div><div class="wr-v sm">${WEEK.album||'—'}</div></div>
     </div></div>
     ${locked?`<div class="wr-lock"><div class="wr-lockmsg">🔒 Hit your daily goal <b>every day this week</b> to unlock your Weekly Wrapped.<br><span>${WEEK.goalDays||0} of 7 goal days so far — keep your streak alive.</span></div></div>`:''}`;
+}
+function renderHoursArt(){
+  const art=document.getElementById('hoursArt'), lab=document.getElementById('hoursArtLab');
+  if(!art||!lab) return;
+  if(TOP_ARTIST.img){ art.style.backgroundImage=`url('${TOP_ARTIST.img}')`;
+    lab.innerHTML=`<div class="k">Most played</div><div class="n">${TOP_ARTIST.name}</div>`; }
+  else { art.style.backgroundImage=''; lab.innerHTML=''; }
 }
 function renderAlbums(){
   const box=document.getElementById('albums'); if(!box) return; box.innerHTML='';
@@ -821,16 +840,25 @@ async function loadHero(){
 
 /* New artists to check out = similar to your favorites, EXCLUDING anyone you already know */
 async function loadSuggestions(){
-  const seeds=(SEEDS.length?SEEDS:['Kendrick Lamar']).slice(0,4);
+  // Seed from your MOST RECENT listening (last month) so the list evolves as your taste shifts.
+  let seeds=[];
+  try{ const j=await lfm('user.gettopartists',{period:'1month',limit:8});
+    seeds=((j&&j.topartists&&j.topartists.artist)||[]).map(a=>a.name); }catch(e){}
+  if(!seeds.length) seeds=SEEDS.slice();
+  if(!seeds.length) seeds=['Kendrick Lamar'];
+  seeds=seeds.slice(0,5);
   const cand={}, seedOf={};
   for(const seed of seeds){
     const p=new URLSearchParams({method:'artist.getsimilar',artist:seed,api_key:CONFIG.lastfmKey,format:'json',autocorrect:1,limit:25});
     const r=await fetch(LFM+'?'+p.toString()); if(!r.ok) continue; const jj=await r.json();
     const arr=(jj.similarartists&&jj.similarartists.artist)||[];
-    arr.forEach(a=>{ const key=a.name.toLowerCase(); if(KNOWN.has(key)) return;
+    arr.forEach(a=>{ const key=a.name.toLowerCase(); if(KNOWN.has(key)) return; // exclude anyone you already listen to
       cand[a.name]=(cand[a.name]||0)+parseFloat(a.match||0); if(!seedOf[a.name]) seedOf[a.name]=seed; });
   }
-  const ranked=Object.entries(cand).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([n])=>n);
+  // Keep a relevant pool, then shuffle so it stays fresh instead of the same 6 forever.
+  let pool=Object.entries(cand).sort((a,b)=>b[1]-a[1]).slice(0,16).map(([n])=>n);
+  for(let i=pool.length-1;i>0;i--){ const k=Math.floor(Math.random()*(i+1)); [pool[i],pool[k]]=[pool[k],pool[i]]; }
+  const ranked=pool.slice(0,6);
   if(!ranked.length) return;
   SUGGESTED=await Promise.all(ranked.map(async name=>{
     const info=await spSearchArtist(name);
