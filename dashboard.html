@@ -836,8 +836,17 @@ async function getToken(){
   const r=await fetch(SP_ACCOUNTS+'/api/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
   return r.ok?saveTokens(await r.json()):null;
 }
-async function spGet(path){const at=await getToken();if(!at)return null;
-  const r=await fetch(SP_API+path,{headers:{Authorization:'Bearer '+at}});return r.ok?r.json():null;}
+async function spGet(path,retried){
+  const at=await getToken(); if(!at) return null;
+  const r=await fetch(SP_API+path,{headers:{Authorization:'Bearer '+at}});
+  if(r.status===429 && !retried){ const ra=parseInt(r.headers.get('Retry-After')||'1',10)||1;
+    await new Promise(res=>setTimeout(res,Math.min(ra,5)*1000)); return spGet(path,true); }
+  return r.ok?r.json():null;
+}
+// Persistent image cache — Spotify /search is heavily rate-limited for dev-mode apps,
+// so cache artist/track image lookups across loads to nearly eliminate repeat calls.
+let imgCache={}; try{ imgCache=JSON.parse(localStorage.getItem('ss_imgcache')||'{}'); }catch(e){ imgCache={}; }
+function cacheSave(){ try{ const k=Object.keys(imgCache); if(k.length>500) k.slice(0,k.length-400).forEach(x=>delete imgCache[x]); localStorage.setItem('ss_imgcache',JSON.stringify(imgCache)); }catch(e){} }
 
 /* ---- Last.fm verified login (step 2 of the connect flow) ---- */
 function startLastfmAuth(){
@@ -876,19 +885,26 @@ function saveGoalRemote(v){ const uid=store.get('ss_uid',''); if(!uid) return;
   try{ fetch('/api/goal',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({uid,goal:v})}); }catch(e){} }
 /* Spotify search helpers (for real artwork + open links) */
 async function spSearchArtist(name){
+  const key='a:'+String(name).toLowerCase();
+  if(imgCache[key]!==undefined) return imgCache[key];
   const j=await spGet('/search?type=artist&limit=8&q='+encodeURIComponent(name));
-  const items=(j&&j.artists&&j.artists.items)||[]; if(!items.length) return null;
+  if(!j) return null; // request failed (rate limit etc.) — don't cache, retry next load
+  const items=(j.artists&&j.artists.items)||[];
   const norm=s=>String(s).toLowerCase().replace(/[^a-z0-9]/g,'');
   const a=items.find(x=>norm(x.name)===norm(name)); // exact-name match only — never show the wrong artist's face
-  if(!a) return null;
-  return {img:((a.images||[]).slice(-1)[0]||{}).url||'', big:((a.images||[])[0]||{}).url||'',
-    url:(a.external_urls||{}).spotify||'', genres:a.genres||[]};
+  const val=a?{img:((a.images||[]).slice(-1)[0]||{}).url||'', big:((a.images||[])[0]||{}).url||'', url:(a.external_urls||{}).spotify||''}:null;
+  imgCache[key]=val; cacheSave();
+  return val;
 }
 async function spSearchTrack(name,artist){
+  const key='t:'+String(name).toLowerCase()+'|'+String(artist).toLowerCase();
+  if(imgCache[key]!==undefined) return imgCache[key];
   const j=await spGet('/search?type=track&limit=1&q='+encodeURIComponent(name+' '+artist));
-  const t=j&&j.tracks&&j.tracks.items&&j.tracks.items[0];
-  if(!t) return {img:'',url:''};
-  return {img:(((t.album||{}).images||[]).slice(-1)[0]||{}).url||'', url:(t.external_urls||{}).spotify||''};
+  if(!j) return {img:'',url:''}; // failed — don't cache
+  const t=j.tracks&&j.tracks.items&&j.tracks.items[0];
+  const val=t?{img:(((t.album||{}).images||[]).slice(-1)[0]||{}).url||'', url:(t.external_urls||{}).spotify||''}:{img:'',url:''};
+  imgCache[key]=val; cacheSave();
+  return val;
 }
 
 /* Spotify top artists (all-time) = broad taste → seeds for suggestions, KNOWN set, genres */
@@ -931,10 +947,10 @@ async function loadGenres(){
 async function loadTopSongs(){
   const j=await lfm('user.gettoptracks',{period:'12month',limit:8});
   const arr=(j&&j.toptracks&&j.toptracks.track)||[]; if(!arr.length) return;
-  SONGS=await Promise.all(arr.map(async t=>{
-    const artist=(t.artist||{}).name||''; const art=await spSearchTrack(t.name,artist);
-    return [t.name,artist,(t.playcount||''),art.img,art.url];
-  }));
+  const out=[];
+  for(const t of arr){ const artist=(t.artist||{}).name||''; const art=await spSearchTrack(t.name,artist);
+    out.push([t.name,artist,(t.playcount||''),art.img,art.url]); }
+  SONGS=out;
 }
 async function loadHero(){
   const j=await lfm('user.gettopartists',{period:'12month',limit:5});
@@ -968,10 +984,10 @@ async function loadSuggestions(){
   for(let i=pool.length-1;i>0;i--){ const k=Math.floor(Math.random()*(i+1)); [pool[i],pool[k]]=[pool[k],pool[i]]; }
   const ranked=pool.slice(0,6);
   if(!ranked.length) return;
-  SUGGESTED=await Promise.all(ranked.map(async name=>{
-    const info=await spSearchArtist(name);
-    return [name,'Similar to '+trim(seedOf[name]||'your taste',16),(info&&info.img)||'',(info&&info.url)||''];
-  }));
+  const out=[];
+  for(const name of ranked){ const info=await spSearchArtist(name);
+    out.push([name,'Similar to '+trim(seedOf[name]||'your taste',16),(info&&info.img)||'',(info&&info.url)||'']); }
+  SUGGESTED=out;
 }
 async function loadDiscovered(){
   const sv=await spGet('/me/tracks?limit=50'); if(!sv||!sv.items) return;
