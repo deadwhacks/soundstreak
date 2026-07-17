@@ -887,22 +887,13 @@ function saveGoalRemote(v){ const uid=store.get('ss_uid',''); if(!uid) return;
 async function spSearchArtist(name){
   const key='a:'+String(name).toLowerCase();
   if(imgCache[key]!==undefined) return imgCache[key];
-  const j=await spGet('/search?type=artist&limit=8&q='+encodeURIComponent(name));
-  if(!j) return null; // request failed (rate limit etc.) — don't cache, retry next load
-  const items=(j.artists&&j.artists.items)||[];
-  const norm=s=>String(s).toLowerCase().replace(/[^a-z0-9]/g,'');
-  const a=items.find(x=>norm(x.name)===norm(name)); // exact-name match only — never show the wrong artist's face
-  const val=a?{img:((a.images||[]).slice(-1)[0]||{}).url||'', big:((a.images||[])[0]||{}).url||'', url:(a.external_urls||{}).spotify||''}:null;
-  imgCache[key]=val; cacheSave();
-  return val;
-}
-async function spSearchTrack(name,artist){
-  const key='t:'+String(name).toLowerCase()+'|'+String(artist).toLowerCase();
-  if(imgCache[key]!==undefined) return imgCache[key];
-  const j=await spGet('/search?type=track&limit=1&q='+encodeURIComponent(name+' '+artist));
-  if(!j) return {img:'',url:''}; // failed — don't cache
-  const t=j.tracks&&j.tracks.items&&j.tracks.items[0];
-  const val=t?{img:(((t.album||{}).images||[]).slice(-1)[0]||{}).url||'', url:(t.external_urls||{}).spotify||''}:{img:'',url:''};
+  let val=null;
+  try{
+    const r=await fetch('/api/artist-image?name='+encodeURIComponent(name)); // server-side lookup + KV cache (no browser rate limit)
+    if(!r.ok) return null; // server error — don't cache, retry later
+    const j=await r.json();
+    val = (j&&j.img) ? {img:j.img, big:j.img, url:'https://open.spotify.com/search/'+encodeURIComponent(name)} : null;
+  }catch(e){ return null; }
   imgCache[key]=val; cacheSave();
   return val;
 }
@@ -956,8 +947,9 @@ async function loadHero(){
   const arr=(j&&j.topartists&&j.topartists.artist)||[]; if(!arr.length) return;
   arr.forEach(a=>KNOWN.add(a.name.toLowerCase()));
   if(!SEEDS.length) SEEDS=arr.map(a=>a.name);
-  const top=arr[0]; // Spotify top-artist photo → else that artist's album cover from scrobbles → else gradient
-  const img=ARTISTS_IMG[top.name]||SCROBBLE_ARTIST_ART[top.name.toLowerCase()]||'';
+  const top=arr[0]; // Spotify top-artist photo → else fetch the real artist photo via the proxy
+  let img=ARTISTS_IMG[top.name]||'';
+  if(!img){ const info=await spSearchArtist(top.name); img=(info&&info.big)||''; }
   TOP_ARTIST={name:top.name, sub:(top.playcount?top.playcount+' plays this year':'Your top artist'),
     img, url:'https://open.spotify.com/search/'+encodeURIComponent(top.name)};
 }
@@ -1069,7 +1061,9 @@ async function loadNowPlaying(){
     const j=await r.json(); if(!j||!j.item){ setNowPlaying(NOW_LAST); return; }
     const cover=(((j.item.album||{}).images||[])[0]||{}).url||'';
     const np={ name:j.item.name, artist:(j.item.artists||[]).map(a=>a.name).join(', '),
-      img:cover, url:((j.item.external_urls||{}).spotify)||'', playing:!!j.is_playing, artistImg:cover };
+      img:cover, url:((j.item.external_urls||{}).spotify)||'', playing:!!j.is_playing, artistImg:'' };
+    const primary=(j.item.artists||[])[0]; // real artist photo for the banner (via proxy, cached)
+    if(primary){ const info=await spSearchArtist(primary.name); np.artistImg=(info&&info.img)||''; }
     NOW_LAST=np; setNowPlaying(np);
   }catch(e){ /* transient network — keep last */ }
 }
@@ -1084,18 +1078,6 @@ function markLive(){
       ? 'Live data connected. Your streak & charts build daily from here — check back as history grows.'
       : 'Live data connected — powered by Spotify + Last.fm.'; }
 }
-// Diagnostic: fires one /search and reports the exact HTTP status + Retry-After in the footer.
-async function probeSearch(){
-  const at=await getToken(); if(!at) return;
-  const foot=document.getElementById('pageFoot');
-  try{
-    const r=await fetch(SP_API+'/search?type=artist&limit=1&q=radiohead',{headers:{Authorization:'Bearer '+at}});
-    const ra=r.headers.get('Retry-After');
-    const msg='Spotify /search → HTTP '+r.status+(r.ok?' ✓ working':'')+(ra?(' · Retry-After '+ra+'s ≈ '+Math.round(ra/60)+' min'):'');
-    if(foot){ foot.textContent=msg; foot.style.color='#F5A623'; foot.style.fontFamily='monospace'; }
-    console.log('[SoundStreak]',msg);
-  }catch(e){ if(foot) foot.textContent='Spotify /search probe → error: '+((e&&e.message)||e); }
-}
 async function hydrate(){
   setConnecting();
   const status=[];
@@ -1109,8 +1091,7 @@ async function hydrate(){
   await Promise.allSettled([ run('songs',loadTopSongs), run('hero',loadHero), run('albums',loadAlbums), run('genres',loadGenres) ]);
   state.live=true; state.loaded=true; render();
   loadNowPlaying(); if(!window.__npTimer) window.__npTimer=setInterval(loadNowPlaying,15000);
-  run('suggest',loadSuggestions).then(()=>render()); // real photos, background (best-effort)
-  probeSearch(); // diagnostic: proves /search status + Retry-After in the footer
+  run('suggest',loadSuggestions).then(()=>render()); // real artist photos via proxy, background
   if(window.__ssErr&&window.__ssErr.length) console.warn('[SoundStreak] render issues:',window.__ssErr);
 }
 
