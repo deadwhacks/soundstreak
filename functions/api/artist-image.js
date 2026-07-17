@@ -32,6 +32,10 @@ export async function onRequestGet(context){
   const cacheKey = 'artimg:' + name.toLowerCase();
   if(kv){ const c = await kv.get(cacheKey); if(c) return new Response(JSON.stringify({ img:c, cached:true }), { headers:H }); } // trust only non-empty cache (self-heals bad empties)
 
+  // Circuit breaker: after a 429, stop hitting Spotify until the cooldown passes so the app-level limit can reset.
+  if(kv){ const cd = await kv.get('sp_cooldown'); if(cd && Date.now() < parseInt(cd,10))
+    return new Response(JSON.stringify({ img:'', cooling:true, until: parseInt(cd,10) }), { headers:HN }); }
+
   const token = await getAppToken(env);
   if(!token) return new Response(JSON.stringify({ error:'server not configured (SPOTIFY_SECRET)' }), { status:500, headers:HN });
 
@@ -40,6 +44,12 @@ export async function onRequestGet(context){
   try{
     const sr = await fetch('https://api.spotify.com/v1/search?type=artist&limit=10&market=US&q=' + encodeURIComponent(name), { headers:{ Authorization:'Bearer '+token } });
     status = sr.status;
+    if(status === 429){
+      const ra = parseInt(sr.headers.get('Retry-After')||'0',10);
+      const until = Date.now() + ((ra>0 ? ra : 600) * 1000); // honor Retry-After, else back off 10 min
+      if(kv) await kv.put('sp_cooldown', String(until));
+      return new Response(JSON.stringify({ img:'', status:429, retryAfter:ra, cooling:true, until }), { headers:HN });
+    }
     if(sr.ok){ const sj = await sr.json(); const items = (sj.artists && sj.artists.items) || []; n = items.length;
       const a = items.find(x => norm(x.name) === norm(name)) || items[0]; // exact match, else the top result
       if(a){ img = ((a.images||[])[0]||{}).url || ''; matched = a.name; } }
