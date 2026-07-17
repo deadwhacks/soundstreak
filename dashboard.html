@@ -170,9 +170,10 @@
     transition:transform .12s ease, border-color .15s}
   .np:hover{transform:translateY(-2px);border-color:var(--green)}
   .np-art,.np-meta,.np-open{position:relative;z-index:1}
-  .np-bgart{position:absolute;top:0;right:0;bottom:0;width:56%;background-size:cover;background-position:center 25%;
-    -webkit-mask-image:linear-gradient(to right, transparent, #000 90%);mask-image:linear-gradient(to right, transparent, #000 90%);
+  .np-bgart{position:absolute;top:0;right:0;bottom:0;width:34%;background-size:cover;background-position:center 20%;
+    -webkit-mask-image:linear-gradient(to right, transparent, #000 78%);mask-image:linear-gradient(to right, transparent, #000 78%);
     opacity:.42;z-index:0;pointer-events:none}
+  @media(max-width:640px){.np-bgart{width:46%}}
   .np-art{width:66px;height:66px;border-radius:12px;flex:none;background:var(--surface-2) center/cover no-repeat;box-shadow:0 10px 30px -10px rgba(0,0,0,.6)}
   .np-meta{flex:1;min-width:0}
   .np-lab{display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.16em;color:var(--green);font-weight:700}
