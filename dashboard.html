@@ -604,9 +604,16 @@ function markLive(){
 }
 async function hydrate(){
   setConnecting();
-  try{ await Promise.all([loadProfile(),loadTop(),loadDiscovered(),loadHistory()]); }
-  catch(e){ console.warn('hydrate error',e); }
+  const status=[];
+  async function run(name,fn){ try{ await fn(); status.push(name+':ok'); }
+    catch(e){ status.push(name+':ERR '+((e&&e.message)||e)); console.error('[SoundStreak]',name,e); } }
+  // allSettled = wait for every loader (a failure in one no longer aborts the rest or renders early)
+  await Promise.allSettled([ run('profile',loadProfile), run('top',loadTop), run('discovered',loadDiscovered), run('history',loadHistory) ]);
   state.live=true; markLive(); render();
+  const daysWithData=state.days.filter(d=>d.minutes>0).length;
+  const dbg=`DIAG — top artist: ${TOP_ARTIST.name} · songs: ${SONGS.length} · genres: ${GENRES.length} · days>0: ${daysWithData} · [${status.join(' | ')}]`;
+  const foot=document.querySelector('.foot'); if(foot){ foot.textContent=dbg; foot.style.color='#F5A623'; foot.style.fontFamily='monospace'; }
+  console.log('[SoundStreak]',dbg);
 }
 
 /* ---------- init (dashboard is gated: no auth -> back to landing) ---------- */
