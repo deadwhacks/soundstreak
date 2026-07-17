@@ -774,7 +774,7 @@ const CONFIG={
   spotifyClientId:"70094dedf6454b8c82c45ee46ebfc392",
   scopes:"user-top-read user-read-recently-played user-read-currently-playing user-read-playback-state user-library-read",
   lastfmKey:"379e27dc21968362009476c1867f1ae1",
-  lastfmUser: store.get('ss_lastfm_user','bigtunajake'),
+  lastfmUser: store.get('ss_lastfm_user',''),
 };
 const SP_ACCOUNTS='https://accounts.spotify.com';
 const SP_API='https://api.spotify.com/v1';
@@ -820,6 +820,15 @@ async function getToken(){
 }
 async function spGet(path){const at=await getToken();if(!at)return null;
   const r=await fetch(SP_API+path,{headers:{Authorization:'Bearer '+at}});return r.ok?r.json():null;}
+
+/* ---- Last.fm verified login (step 2 of the connect flow) ---- */
+function startLastfmAuth(){
+  location.href='https://www.last.fm/api/auth/?api_key='+CONFIG.lastfmKey+'&cb='+encodeURIComponent(REDIRECT);
+}
+async function lastfmExchange(token){
+  try{ const r=await fetch('/api/lastfm-session?token='+encodeURIComponent(token));
+    if(!r.ok) return ''; const j=await r.json(); return (j&&j.name)||''; }catch(e){ return ''; }
+}
 
 /* ---- Last.fm ---- */
 async function lfm(method,extra){
@@ -1051,13 +1060,35 @@ async function hydrate(){
   if(window.__ssErr&&window.__ssErr.length) console.warn('[SoundStreak] render issues:',window.__ssErr);
 }
 
-/* ---------- init (dashboard is gated: no auth -> back to landing) ---------- */
+/* ---------- init: gated, two-step connect (Spotify → Last.fm) ---------- */
 const logoutBtn=document.getElementById('logoutBtn');
-if(logoutBtn) logoutBtn.onclick=()=>{ ['ss_at','ss_rt','ss_exp','ss_verifier'].forEach(k=>store.set(k,'')); location.replace('./index.html'); };
+if(logoutBtn) logoutBtn.onclick=()=>{ ['ss_at','ss_rt','ss_exp','ss_verifier','ss_lastfm_user'].forEach(k=>store.set(k,'')); location.replace('./index.html'); };
 (async ()=>{
-  const code=new URLSearchParams(location.search).get('code');
-  if(code){ history.replaceState({},document.title,REDIRECT); render(); const at=await exchangeCode(code); if(at){ await hydrate(); return; } }
-  if(store.get('ss_rt','')||store.get('ss_at','')){ render(); if(await getToken()){ await hydrate(); return; } }
+  const params=new URLSearchParams(location.search);
+  const spCode=params.get('code'), lfmToken=params.get('token');
+  const haveSpotify=()=> store.get('ss_rt','')||store.get('ss_at','');
+  const haveLastfm=()=> !!store.get('ss_lastfm_user','');
+  const go=async ()=>{ CONFIG.lastfmUser=store.get('ss_lastfm_user',''); await hydrate(); };
+
+  // Step 2 return — Last.fm token
+  if(lfmToken){
+    history.replaceState({},document.title,REDIRECT); render();
+    const name=await lastfmExchange(lfmToken); if(name) store.set('ss_lastfm_user',name);
+    if(haveSpotify() && haveLastfm() && await getToken()){ await go(); return; }
+    location.replace('./index.html'); return;
+  }
+  // Step 1 return — Spotify code
+  if(spCode){
+    history.replaceState({},document.title,REDIRECT); render();
+    const at=await exchangeCode(spCode);
+    if(at){ if(!haveLastfm()){ startLastfmAuth(); return; } await go(); return; }
+    location.replace('./index.html'); return;
+  }
+  // Returning visit
+  if(haveSpotify()){
+    render();
+    if(await getToken()){ if(!haveLastfm()){ startLastfmAuth(); return; } await go(); return; }
+  }
   location.replace('./index.html'); // not signed in
 })();
 </script>
