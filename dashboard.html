@@ -42,6 +42,10 @@
   .dot{width:8px;height:8px;border-radius:50%;background:var(--blue);box-shadow:0 0 0 3px rgba(19,195,197,.18)}
   .avatar{width:34px;height:34px;border-radius:50%;background:var(--grad);display:flex;align-items:center;
     justify-content:center;font-weight:800;font-size:14px;color:#0b0b0b}
+  .connectbtn{cursor:pointer;font-family:'Manrope',sans-serif;font-weight:700;font-size:13px;color:#04211f;
+    background:var(--blue);border:none;padding:9px 16px;border-radius:999px;transition:transform .1s}
+  .connectbtn:hover{transform:translateY(-1px)}
+  .art[style*="url"],.photo[style*="url"]{background-size:cover;background-position:center}
 
   /* section title */
   .kicker{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.14em;font-weight:700}
@@ -164,8 +168,9 @@
   <div class="wrap navrow">
     <a href="./index.html"><img class="logo" src="./SoundStreakLogoDarkMode.svg" alt="SoundStreak" /></a>
     <div class="navright">
-      <span class="pill"><span class="dot"></span><span id="connText">Sample data</span></span>
-      <div class="avatar">J</div>
+      <button class="connectbtn" id="connectBtn">Connect Spotify</button>
+      <span class="pill"><span class="dot" id="connDot"></span><span id="connText">Sample data</span></span>
+      <div class="avatar" id="avatar">J</div>
     </div>
   </div>
 </nav>
@@ -302,21 +307,22 @@ function buildDays(){
 }
 const state={ goal: parseInt(store.get('ss_goal',GOAL_DEFAULT),10)||GOAL_DEFAULT, days: buildDays() };
 
-const SONGS=[
-  ["Church","Alison Wonderland",92],["Midnight City","M83",81],["Innerbloom","RÜFÜS DU SOL",76],
-  ["Kerala","Bonobo",68],["Genesis","Grimes",61],["Runaway","Kanye West",57],
-  ["Losing It","FISHER",55],["Tadow","Masego",49],
+let SONGS=[
+  ["Church","Alison Wonderland",92,""],["Midnight City","M83",81,""],["Innerbloom","RÜFÜS DU SOL",76,""],
+  ["Kerala","Bonobo",68,""],["Genesis","Grimes",61,""],["Runaway","Kanye West",57,""],
+  ["Losing It","FISHER",55,""],["Tadow","Masego",49,""],
 ];
-const DISCOVERED=[
-  ["Alison Wonderland","Feb 2026",92],["FISHER","Apr 2026",55],["Masego","Mar 2026",49],
-  ["Fred again..","May 2026",44],["Sofia Kourtesis","Jun 2026",31],
+let DISCOVERED=[
+  ["Alison Wonderland","♥ Liked · Feb 2026",92,""],["FISHER","♥ Liked · Apr 2026",55,""],["Masego","♥ Liked · Mar 2026",49,""],
+  ["Fred again..","♥ Liked · May 2026",44,""],["Sofia Kourtesis","♥ Liked · Jun 2026",31,""],
 ];
-const GENRES=[["Electronic",5820],["Indie",3910],["House",3120],["Hip-Hop",2450],["Ambient",1360],["Jazz",980]];
-const SUGGESTED=[
-  ["Anfisa Letyago","Because you like FISHER"],["ANOTR","From your House rotation"],
-  ["Jamie xx","Fans of Bonobo love this"],["KAYTRANADA","Based on Masego"],
+let GENRES=[["Electronic",5820],["Indie",3910],["House",3120],["Hip-Hop",2450],["Ambient",1360],["Jazz",980]];
+let SUGGESTED=[
+  ["Anfisa Letyago","Because you like FISHER",""],["ANOTR","From your House rotation",""],
+  ["Jamie xx","Fans of Bonobo love this",""],["KAYTRANADA","Based on Masego",""],
 ];
-const TOP_ARTIST={name:"Alison Wonderland",plays:92,track:"Church"};
+let TOP_ARTIST={name:"Alison Wonderland",sub:'92 plays · top track "Church"',img:""};
+let NOW=null, ARTISTS_IMG={};
 
 /* ---------- generative cover art (deterministic from name) ---------- */
 function hue(str){let h=0;for(const c of str)h=(h*31+c.charCodeAt(0))%360;return h;}
@@ -399,42 +405,51 @@ function renderYear(){
   });
 }
 
+function artHTML(name, img, round){
+  const cls='art'+(round?' round':'');
+  if(img) return `<div class="${cls}" style="background-image:url('${img}')"></div>`;
+  return `<div class="${cls}" style="background:${grad(name)}">${initials(name)}</div>`;
+}
 function renderTaste(){
   // hero
   const h=document.getElementById('tasteHero');
-  h.innerHTML=`<div class="photo" style="background:${grad(TOP_ARTIST.name)}">${initials(TOP_ARTIST.name)}</div>
+  const photo = TOP_ARTIST.img
+    ? `<div class="photo" style="background-image:url('${TOP_ARTIST.img}')"></div>`
+    : `<div class="photo" style="background:${grad(TOP_ARTIST.name)}">${initials(TOP_ARTIST.name)}</div>`;
+  h.innerHTML=`${photo}
     <div><div class="k">Most played this year</div>
     <div class="nm">${TOP_ARTIST.name}</div>
-    <div class="meta">${TOP_ARTIST.plays} plays · top track "${TOP_ARTIST.track}"</div></div>`;
+    <div class="meta">${TOP_ARTIST.sub||''}</div></div>`;
 
   // songs
   const s=document.getElementById('songs'); s.innerHTML='';
   SONGS.forEach((r,i)=>{ s.insertAdjacentHTML('beforeend',
     `<div class="row"><div class="rank">${i+1}</div>
-     <div class="art" style="background:${grad(r[0]+r[1])}">${initials(r[0])}</div>
+     ${artHTML(r[0]+r[1], r[3])}
      <div class="rmeta"><div class="t">${r[0]}</div><div class="s">${r[1]}</div></div>
-     <div class="rval">${r[2]} plays</div></div>`); });
+     ${r[2]?`<div class="rval">${r[2]} plays</div>`:''}</div>`); });
 
   // discovered
   const d=document.getElementById('discovered'); d.innerHTML='';
   DISCOVERED.forEach(r=>{ d.insertAdjacentHTML('beforeend',
     `<div class="row">
-     <div class="art round" style="background:${grad(r[0])}">${initials(r[0])}</div>
-     <div class="rmeta"><div class="t">${r[0]}</div><div class="s">♥ Liked · discovered ${r[1]}</div></div>
-     <div class="rval">${r[2]} plays</div></div>`); });
+     ${artHTML(r[0], r[3], true)}
+     <div class="rmeta"><div class="t">${r[0]}</div><div class="s">${r[1]}</div></div>
+     ${r[2]?`<div class="rval">${r[2]} plays</div>`:''}</div>`); });
 
-  // genres
-  const g=document.getElementById('genres'); g.innerHTML=''; const max=Math.max(...GENRES.map(x=>x[1]));
-  GENRES.forEach(r=>{ const hrs=(r[1]/60).toFixed(0);
+  // genres (shown as share of listening — works for minutes or artist-genre counts)
+  const g=document.getElementById('genres'); g.innerHTML='';
+  const max=Math.max(...GENRES.map(x=>x[1])), tot=GENRES.reduce((a,x)=>a+x[1],0)||1;
+  GENRES.forEach(r=>{ const share=Math.round(r[1]/tot*100);
     g.insertAdjacentHTML('beforeend',
     `<div class="gbar"><div class="gl">${r[0]}</div>
      <div class="gtrack"><div class="gfill" style="width:${Math.round(r[1]/max*100)}%"></div></div>
-     <div class="gval">${hrs} hrs</div></div>`); });
+     <div class="gval">${share}%</div></div>`); });
 
   // suggested
   const su=document.getElementById('suggested'); su.innerHTML='';
   SUGGESTED.forEach(r=>{ su.insertAdjacentHTML('beforeend',
-    `<div class="scard"><div class="art round" style="background:${grad(r[0])}">${initials(r[0])}</div>
+    `<div class="scard">${artHTML(r[0], r[2], true)}
      <div><div class="t">${r[0]}</div><div class="s">${r[1]}</div></div></div>`); });
 }
 
@@ -456,8 +471,152 @@ document.getElementById('saveGoal').onclick=()=>{
   overlay.classList.remove('show');
 };
 
+/* ===================== REAL DATA LAYER ===================== */
+const CONFIG={
+  spotifyClientId:"70094dedf6454b8c82c45ee46ebfc392",
+  scopes:"user-top-read user-read-recently-played user-read-currently-playing user-read-playback-state user-library-read",
+  lastfmKey:"379e27dc21968362009476c1867f1ae1",
+  lastfmUser: store.get('ss_lastfm_user','bigtunajake'),
+};
+const SP_ACCOUNTS='https://accounts.spotify.com';
+const SP_API='https://api.spotify.com/v1';
+const LFM='https://ws.audioscrobbler.com/2.0/';
+const REDIRECT=location.origin+location.pathname;
+
+const cap=s=>String(s).replace(/\b\w/g,c=>c.toUpperCase());
+const trim=(s,n)=>s.length>n?s.slice(0,n-1)+'…':s;
+
+/* ---- Spotify PKCE auth (no secret) ---- */
+function b64url(buf){return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
+async function sha256(s){return crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));}
+function randStr(n){const a=new Uint8Array(n);crypto.getRandomValues(a);return b64url(a).slice(0,n);}
+async function spotifyLogin(){
+  if(!CONFIG.spotifyClientId){alert('Add your Spotify Client ID to CONFIG.');return;}
+  const v=randStr(64); store.set('ss_verifier',v);
+  const challenge=b64url(await sha256(v));
+  const p=new URLSearchParams({client_id:CONFIG.spotifyClientId,response_type:'code',redirect_uri:REDIRECT,
+    scope:CONFIG.scopes,code_challenge_method:'S256',code_challenge:challenge});
+  location.href=SP_ACCOUNTS+'/authorize?'+p.toString();
+}
+function saveTokens(t){
+  if(!t||!t.access_token) return null;
+  store.set('ss_at',t.access_token);
+  if(t.refresh_token) store.set('ss_rt',t.refresh_token);
+  store.set('ss_exp', String(Date.now()+((t.expires_in||3600)*1000)-60000));
+  return t.access_token;
+}
+async function exchangeCode(code){
+  const v=store.get('ss_verifier',''); if(!v) return null;
+  const body=new URLSearchParams({client_id:CONFIG.spotifyClientId,grant_type:'authorization_code',
+    code,redirect_uri:REDIRECT,code_verifier:v});
+  const r=await fetch(SP_ACCOUNTS+'/api/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
+  return r.ok?saveTokens(await r.json()):null;
+}
+async function getToken(){
+  const at=store.get('ss_at',''), exp=parseInt(store.get('ss_exp','0'),10);
+  if(at && Date.now()<exp) return at;
+  const rt=store.get('ss_rt',''); if(!rt) return null;
+  const body=new URLSearchParams({client_id:CONFIG.spotifyClientId,grant_type:'refresh_token',refresh_token:rt});
+  const r=await fetch(SP_ACCOUNTS+'/api/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
+  return r.ok?saveTokens(await r.json()):null;
+}
+async function spGet(path){const at=await getToken();if(!at)return null;
+  const r=await fetch(SP_API+path,{headers:{Authorization:'Bearer '+at}});return r.ok?r.json():null;}
+
+/* ---- Last.fm ---- */
+async function lfm(method,extra){
+  const p=new URLSearchParams({method,user:CONFIG.lastfmUser,api_key:CONFIG.lastfmKey,format:'json',...(extra||{})});
+  const r=await fetch(LFM+'?'+p.toString()); return r.ok?r.json():null;
+}
+function img(arr){ // pick a usable last.fm image (skip empty), avoid the placeholder star
+  if(!arr) return ''; const u=(arr[arr.length-1]||{})['#text']||'';
+  return u.includes('2a96cbd8b46e442fc41c2b86b821562f')?'':u;
+}
+
+/* ---- loaders ---- */
+async function loadProfile(){
+  const me=await spGet('/me');
+  if(me&&me.display_name) document.getElementById('avatar').textContent=me.display_name[0].toUpperCase();
+}
+async function loadTop(){
+  const [tr,ar]=await Promise.all([
+    spGet('/me/top/tracks?limit=8&time_range=long_term'),
+    spGet('/me/top/artists?limit=10&time_range=long_term')]);
+  if(tr&&tr.items&&tr.items.length){
+    SONGS=tr.items.map(t=>[t.name,t.artists.map(a=>a.name).join(', '),'',((t.album.images||[]).slice(-1)[0]||{}).url||'']);
+  }
+  if(ar&&ar.items&&ar.items.length){
+    ARTISTS_IMG={}; ar.items.forEach(a=>{ARTISTS_IMG[a.name]=((a.images||[])[0]||{}).url||'';});
+    const top=ar.items[0];
+    TOP_ARTIST={name:top.name,sub:'Your #1 artist of all time',img:((top.images||[])[0]||{}).url||''};
+    const g={}; ar.items.forEach(a=>(a.genres||[]).forEach(x=>{g[x]=(g[x]||0)+1;}));
+    const gg=Object.entries(g).sort((a,b)=>b[1]-a[1]).slice(0,6);
+    if(gg.length) GENRES=gg.map(([n,c])=>[cap(n),c]);
+    await loadSuggestions(top.name);
+  }
+}
+async function loadSuggestions(artist){
+  const p=new URLSearchParams({method:'artist.getsimilar',artist,api_key:CONFIG.lastfmKey,format:'json',limit:6});
+  const r=await fetch(LFM+'?'+p.toString()); if(!r.ok) return; const j=await r.json();
+  const arr=(j.similarartists&&j.similarartists.artist)||[];
+  if(arr.length) SUGGESTED=arr.map(a=>[a.name,'Similar to '+trim(artist,18), ARTISTS_IMG[a.name]||'']);
+}
+async function loadDiscovered(){
+  const sv=await spGet('/me/tracks?limit=50'); if(!sv||!sv.items) return;
+  const yr=new Date().getFullYear(), seen={}, out=[];
+  sv.items.forEach(it=>{ const d=new Date(it.added_at); if(d.getFullYear()!==yr) return;
+    (it.track.artists||[]).forEach(a=>{ if(!seen[a.name]){ seen[a.name]=1;
+      out.push([a.name,'♥ Liked · '+d.toLocaleDateString(undefined,{month:'short',year:'numeric'}),'',
+        ((it.track.album.images||[]).slice(-1)[0]||{}).url||'']); } }); });
+  if(out.length) DISCOVERED=out.slice(0,6);
+}
+async function loadHistory(){
+  const yr=new Date().getFullYear(), from=Math.floor(new Date(yr,0,1).getTime()/1000);
+  const perDay={}; let page=1,total=1;
+  while(page<=total && page<=20){
+    const j=await lfm('user.getrecenttracks',{limit:200,from,page});
+    const rt=j&&j.recenttracks; if(!rt) break;
+    total=parseInt((rt['@attr']||{}).totalPages||'1',10);
+    (rt.track||[]).forEach(t=>{
+      if(t['@attr']&&t['@attr'].nowplaying){ if(!NOW) NOW={name:t.name,artist:(t.artist||{})['#text']||''}; return; }
+      if(t.date){ const d=new Date(t.date.uts*1000); d.setHours(0,0,0,0); perDay[d.getTime()]=(perDay[d.getTime()]||0)+1; }
+    });
+    page++;
+  }
+  const days=[], today0=new Date(); today0.setHours(0,0,0,0); const start=new Date(yr,0,1);
+  for(let d=new Date(start); d<=today0; d.setDate(d.getDate()+1)){
+    const k=new Date(d); k.setHours(0,0,0,0); const c=perDay[k.getTime()]||0;
+    days.push({date:new Date(d),minutes:Math.round(c*3.5)});
+  }
+  state.days=days;
+}
+
+/* ---- UI state ---- */
+function setConnecting(){document.getElementById('connText').textContent='Loading…';}
+function markLive(){
+  const btn=document.getElementById('connectBtn'); if(btn) btn.style.display='none';
+  document.getElementById('connText').textContent = NOW ? ('♪ '+trim(NOW.name,20)) : 'Connected';
+  const foot=document.querySelector('.foot');
+  if(foot){ const days=state.days.filter(d=>d.minutes>0).length;
+    foot.innerHTML = days<14
+      ? 'Live data connected. Your streak & charts build daily from Last.fm — check back as history grows.'
+      : 'Live data connected — powered by Spotify + Last.fm.'; }
+}
+async function hydrate(){
+  setConnecting();
+  try{ await Promise.all([loadProfile(),loadTop(),loadDiscovered(),loadHistory()]); }
+  catch(e){ console.warn('hydrate error',e); }
+  state.live=true; markLive(); render();
+}
+
 /* ---------- init ---------- */
-render();
+render(); // sample preview until connected
+document.getElementById('connectBtn').onclick=spotifyLogin;
+(async ()=>{
+  const code=new URLSearchParams(location.search).get('code');
+  if(code){ history.replaceState({},document.title,REDIRECT); const at=await exchangeCode(code); if(at){ await hydrate(); return; } }
+  if(await getToken()) await hydrate();
+})();
 </script>
 </body>
 </html>
