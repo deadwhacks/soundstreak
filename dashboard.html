@@ -185,9 +185,32 @@
     -webkit-mask-image:linear-gradient(to right, transparent 0%, #000 90%);mask-image:linear-gradient(to right, transparent 0%, #000 90%);
     opacity:.5;pointer-events:none;z-index:0}
   .taste-hero .th-text{position:relative;z-index:1;flex:1;min-width:0}
+
+  /* ===== ambient spacey background + green sunrise ===== */
+  #bg{position:fixed;inset:0;z-index:-2;
+    background:
+      radial-gradient(120% 55% at 50% 120%, rgba(30,215,96,.20), rgba(30,215,96,.06) 32%, transparent 60%),
+      radial-gradient(120% 120% at 50% 0%, #0F1315, #0B0C0E 58%);
+    animation:breathe 9s ease-in-out infinite}
+  #stars{position:fixed;inset:0;z-index:-1;pointer-events:none}
+  @keyframes breathe{0%,100%{filter:brightness(1)}50%{filter:brightness(1.16)}}
+
+  /* ===== alive tiles: glow + grow on hover, gentle entrance ===== */
+  .card,.taste-hero{transition:transform .22s cubic-bezier(.2,.7,.2,1), box-shadow .28s ease, border-color .22s}
+  .card:hover,.taste-hero:hover{transform:translateY(-4px) scale(1.012);border-color:rgba(30,215,96,.45);
+    box-shadow:0 26px 60px -28px rgba(30,215,96,.5), 0 0 0 1px rgba(30,215,96,.12)}
+  .np:hover{box-shadow:0 22px 55px -26px rgba(30,215,96,.5)}
+  .scard:hover{border-color:rgba(30,215,96,.5);box-shadow:0 14px 34px -20px rgba(30,215,96,.5)}
+  .callouts,.charts{animation:rise .6s cubic-bezier(.2,.7,.2,1) both}
+  .charts{animation-delay:.08s}
+  @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+  @media(prefers-reduced-motion:reduce){#bg{animation:none}.callouts,.charts{animation:none}
+    .card,.taste-hero{transition:none}.card:hover,.taste-hero:hover{transform:none}}
 </style>
 </head>
 <body>
+<div id="bg"></div>
+<canvas id="stars"></canvas>
 
 <!-- nav -->
 <nav>
@@ -744,6 +767,31 @@ if(logoutBtn) logoutBtn.onclick=()=>{ ['ss_at','ss_rt','ss_exp','ss_verifier'].f
   if(code){ history.replaceState({},document.title,REDIRECT); render(); const at=await exchangeCode(code); if(at){ await hydrate(); return; } }
   if(store.get('ss_rt','')||store.get('ss_at','')){ render(); if(await getToken()){ await hydrate(); return; } }
   location.replace('./index.html'); // not signed in
+})();
+</script>
+
+<!-- ambient particle field -->
+<script>
+(function(){
+  const c=document.getElementById('stars'); if(!c) return;
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const ctx=c.getContext('2d'); const dpr=Math.min(window.devicePixelRatio||1,2);
+  let w,h,parts;
+  function init(){ const n=Math.min(120,Math.round(innerWidth*innerHeight/15000));
+    parts=Array.from({length:n},function(){return{
+      x:Math.random()*w, y:Math.random()*h, r:(Math.random()*1.4+0.3)*dpr,
+      vy:-(Math.random()*0.14+0.03)*dpr, a:Math.random()*0.5+0.15,
+      tw:Math.random()*0.02+0.004, ph:Math.random()*6.28, g:Math.random()<0.33};}); }
+  function resize(){ w=c.width=innerWidth*dpr; h=c.height=innerHeight*dpr;
+    c.style.width=innerWidth+'px'; c.style.height=innerHeight+'px'; init(); }
+  function frame(){ ctx.clearRect(0,0,w,h);
+    for(let i=0;i<parts.length;i++){ const p=parts[i];
+      p.y+=p.vy; p.ph+=p.tw; if(p.y<-6){ p.y=h+6; p.x=Math.random()*w; }
+      const al=p.a*(0.55+0.45*Math.sin(p.ph));
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,6.283);
+      ctx.fillStyle = p.g?('rgba(30,215,96,'+al+')'):('rgba(216,232,224,'+al+')'); ctx.fill(); }
+    if(!reduce) requestAnimationFrame(frame); }
+  addEventListener('resize',resize); resize(); frame();
 })();
 </script>
 </body>
