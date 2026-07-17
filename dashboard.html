@@ -36,7 +36,7 @@
   /* nav */
   nav{position:sticky;top:0;z-index:40;background:rgba(14,15,18,.72);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
   .navrow{display:flex;align-items:center;justify-content:space-between;height:70px}
-  .logo{height:38px;display:block}
+  .logo{height:57px;display:block}
   .navright{display:flex;align-items:center;gap:16px}
   .pill{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);
     background:var(--surface);border:1px solid var(--line);padding:7px 13px;border-radius:999px}
@@ -258,6 +258,23 @@
   .album-t{font-size:13.5px;font-weight:700;margin-top:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .album-a{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .album-p{font-size:11.5px;color:var(--muted-2);margin-top:2px}
+
+  /* ===== badge modal ===== */
+  .badge-modal{max-width:660px}
+  .badge-info{cursor:pointer;background:none;border:none;padding:0;color:var(--muted);font-family:'Poppins',sans-serif;font-size:11px;display:inline-flex;align-items:center;gap:5px}
+  .badge-info:hover{color:var(--text)}
+  .badge-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+  @media(max-width:520px){.badge-grid{grid-template-columns:repeat(2,1fr)}}
+  .bcell{text-align:center;padding:14px 8px;border-radius:16px;background:var(--surface-2);border:1px solid var(--line)}
+  .bcell.got{border-color:rgba(30,215,96,.5);box-shadow:0 0 0 1px rgba(30,215,96,.15),0 16px 34px -20px rgba(30,215,96,.55)}
+  .bcell.locked{opacity:.5}
+  .bcell-img{position:relative;height:80px;display:flex;align-items:center;justify-content:center}
+  .bcell-img img{height:78px;width:auto;object-fit:contain}
+  .bcell.locked .bcell-img img{filter:grayscale(1) brightness(.85)}
+  .bchk{position:absolute;top:0;right:20px;background:var(--green);color:#04211f;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800}
+  .bcell-l{font-family:var(--display);font-weight:700;font-size:14px;margin-top:8px}
+  .bcell-d{font-size:11px;color:var(--muted);margin-top:2px}
+  .bcell.got .bcell-d{color:var(--green);font-weight:700}
 </style>
 </head>
 <body>
@@ -356,7 +373,7 @@
   <!-- ===== MUSIC TASTE ===== -->
   <div style="margin:34px 0 16px">
     <div class="kicker">Your year in music</div>
-    <div class="h-sec">The taste you've built</div>
+    <div class="h-sec">YOUR TASTE</div>
   </div>
 
   <!-- most played hero -->
@@ -384,7 +401,7 @@
   <!-- ===== TOP ALBUMS ===== -->
   <div style="margin:34px 0 16px">
     <div class="kicker">On repeat</div>
-    <div class="h-sec">Top albums this year</div>
+    <div class="h-sec">YOUR TOP ALBUMS</div>
   </div>
   <div class="albums" id="albums"></div>
 
@@ -404,6 +421,16 @@
       <button class="mbtn ghost" id="cancelGoal">Cancel</button>
       <button class="mbtn save" id="saveGoal">Save goal</button>
     </div>
+  </div>
+</div>
+
+<!-- badge explainer modal -->
+<div class="overlay" id="badgeOverlay">
+  <div class="modal badge-modal">
+    <h3>Streak badges</h3>
+    <p>The longer your streak, the better your badge. Miss a day and you reset to none — so keep the flame alive. 🔥</p>
+    <div class="badge-grid" id="badgeGrid"></div>
+    <div class="modalbtns"><button class="mbtn save" id="badgeClose">Got it</button></div>
   </div>
 </div>
 
@@ -609,13 +636,17 @@ function renderBadge(streak){
   const main = cur
     ? `<img class="badgeimg" src="${cur.img}" alt="${cur.label} streak badge" title="${cur.label} badge — ${streak}-day streak">`
     : `<div class="badge-none">Start a streak to earn your first badge</div>`;
-  const tl = BADGES.map(b=>`<div class="b ${streak>=b.d?'earned':''}"><img src="${b.img}" alt=""><div class="l">${b.label}</div></div>`).join('');
-  box.innerHTML = `${main}
-    <div class="badge-info"><span class="i">i</span> Streak badges
-      <div class="badge-pop"><div class="pt">Streak badges</div>
-        <div class="pd">The longer your streak, the better the badge. Break your streak and you start over from none.</div>
-        <div class="btl">${tl}</div></div>
-    </div>`;
+  box.innerHTML = `${main}<button class="badge-info" type="button" id="badgeInfoBtn"><span class="i">i</span> Streak badges</button>`;
+  const btn=document.getElementById('badgeInfoBtn'); if(btn) btn.onclick=()=>openBadgeModal(streak);
+}
+function openBadgeModal(streak){
+  const grid=document.getElementById('badgeGrid'); if(!grid) return;
+  grid.innerHTML=BADGES.map(b=>{ const got=streak>=b.d;
+    return `<div class="bcell ${got?'got':'locked'}">
+      <div class="bcell-img"><img src="${b.img}" alt="">${got?'<span class="bchk">✓</span>':''}</div>
+      <div class="bcell-l">${b.label}</div>
+      <div class="bcell-d">${got?'Earned':b.d+(b.d>1?' days':' day')}</div></div>`; }).join('');
+  document.getElementById('badgeOverlay').classList.add('show');
 }
 function renderWrapped(){
   const el=document.getElementById('wrapped'); if(!el) return;
@@ -665,6 +696,11 @@ document.getElementById('saveGoal').onclick=()=>{
   const v=parseInt(goalInput.value,10); if(v>0){state.goal=v;store.set('ss_goal',v);render();}
   overlay.classList.remove('show');
 };
+const badgeOverlay=document.getElementById('badgeOverlay');
+if(badgeOverlay){
+  document.getElementById('badgeClose').onclick=()=>badgeOverlay.classList.remove('show');
+  badgeOverlay.onclick=e=>{ if(e.target===badgeOverlay) badgeOverlay.classList.remove('show'); };
+}
 
 /* ===================== REAL DATA LAYER ===================== */
 const CONFIG={
@@ -737,8 +773,10 @@ async function loadProfile(){
 }
 /* Spotify search helpers (for real artwork + open links) */
 async function spSearchArtist(name){
-  const j=await spGet('/search?type=artist&limit=1&q='+encodeURIComponent(name));
-  const a=j&&j.artists&&j.artists.items&&j.artists.items[0];
+  const j=await spGet('/search?type=artist&limit=8&q='+encodeURIComponent(name));
+  const items=(j&&j.artists&&j.artists.items)||[]; if(!items.length) return null;
+  const norm=s=>String(s).toLowerCase().replace(/[^a-z0-9]/g,'');
+  const a=items.find(x=>norm(x.name)===norm(name)); // exact-name match only — never show the wrong artist's face
   if(!a) return null;
   return {img:((a.images||[]).slice(-1)[0]||{}).url||'', big:((a.images||[])[0]||{}).url||'',
     url:(a.external_urls||{}).spotify||'', genres:a.genres||[]};
