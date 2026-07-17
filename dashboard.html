@@ -159,6 +159,7 @@
   .mbtn.save{background:var(--grad);color:#0b0b0b}
 
   .foot{color:var(--muted-2);font-size:12px;margin:34px 0 60px;text-align:center;line-height:1.7}
+  .callout-sub{color:var(--muted);font-size:13.5px;margin-top:10px;position:relative}
 </style>
 </head>
 <body>
@@ -183,13 +184,13 @@
       <div class="glow" style="background:var(--blue)"></div>
       <div class="lab">🔥 Current streak</div>
       <div class="num grad-text"><span id="streakNum">0</span><span class="unit" style="-webkit-text-fill-color:var(--muted)"> days</span></div>
-      <div class="foot">Longest this year: <b id="longest" style="color:#fff">0</b> days — keep it alive</div>
+      <div class="callout-sub">Longest this year: <b id="longest" style="color:#fff">0</b> days — keep it alive</div>
     </div>
     <div class="card callout">
       <div class="glow" style="background:var(--violet)"></div>
       <div class="lab">🎧 Hours listened this year</div>
       <div class="num grad-text"><span id="yearHours">0</span><span class="unit" style="-webkit-text-fill-color:var(--muted)"> hrs</span></div>
-      <div class="foot"><span class="up" id="pace">▲</span> <span id="paceTxt">on pace for your best year yet</span></div>
+      <div class="callout-sub"><span class="up" id="pace">▲</span> <span id="paceTxt">tracking since you connected</span></div>
     </div>
   </div>
 
@@ -261,8 +262,8 @@
     </div>
   </div>
 
-  <div class="foot">
-    Running on sample data. Song/artist covers are generated placeholders — real album art &amp; artist photos load from Spotify once connected.
+  <div class="foot" id="pageFoot">
+    Running on sample data — connect Spotify to see your own.
   </div>
 </div>
 
@@ -601,10 +602,10 @@ function setConnecting(){document.getElementById('connText').textContent='Loadin
 function markLive(){
   const btn=document.getElementById('connectBtn'); if(btn) btn.style.display='none';
   document.getElementById('connText').textContent = NOW ? ('♪ '+trim(NOW.name,20)) : 'Connected';
-  const foot=document.querySelector('.foot');
+  const foot=document.getElementById('pageFoot');
   if(foot){ const days=state.days.filter(d=>d.minutes>0).length;
-    foot.innerHTML = days<14
-      ? 'Live data connected. Your streak & charts build daily from Last.fm — check back as history grows.'
+    foot.textContent = days<14
+      ? 'Live data connected. Your streak & charts build daily from here — check back as history grows.'
       : 'Live data connected — powered by Spotify + Last.fm.'; }
 }
 async function hydrate(){
@@ -615,11 +616,7 @@ async function hydrate(){
   // allSettled = wait for every loader (a failure in one no longer aborts the rest or renders early)
   await Promise.allSettled([ run('profile',loadProfile), run('top',loadTop), run('discovered',loadDiscovered), run('history',loadHistory) ]);
   state.live=true; markLive(); render();
-  const daysWithData=state.days.filter(d=>d.minutes>0).length;
-  const renderErrs=(window.__ssErr||[]).join('; ')||'none';
-  const dbg=`DIAG — top artist: ${TOP_ARTIST.name} · songs: ${SONGS.length} · genres: ${GENRES.length} · days>0: ${daysWithData} · loaders:[${status.join(' | ')}] · renderErrs:[${renderErrs}]`;
-  const foot=document.querySelector('.foot'); if(foot){ foot.textContent=dbg; foot.style.color='#F5A623'; foot.style.fontFamily='monospace'; }
-  console.log('[SoundStreak]',dbg);
+  if(window.__ssErr&&window.__ssErr.length) console.warn('[SoundStreak] render issues:',window.__ssErr);
 }
 
 /* ---------- init (dashboard is gated: no auth -> back to landing) ---------- */
