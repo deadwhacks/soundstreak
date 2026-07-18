@@ -170,7 +170,7 @@
     transition:transform .12s ease, border-color .15s}
   .np:hover{transform:translateY(-2px);border-color:var(--green)}
   .np-art,.np-meta,.np-open{position:relative;z-index:1}
-  .np-bgart{position:absolute;top:0;right:0;bottom:0;width:34%;background-size:cover;background-position:center 20%;
+  .np-bgart{position:absolute;top:0;right:0;bottom:0;width:34%;background-size:cover;background-position:center 28%;transition:background-position .5s ease;
     -webkit-mask-image:linear-gradient(to right, transparent, #000 78%);mask-image:linear-gradient(to right, transparent, #000 78%);
     opacity:.42;z-index:0;pointer-events:none}
   @media(max-width:640px){.np-bgart{width:46%}}
@@ -1040,12 +1040,64 @@ async function loadAlbums(){
 }
 /* ---- now playing (Spotify currently-playing, polled live) ---- */
 let NOW_LAST=null; const NP_ART_CACHE={};
+/* ---- Face-centered now-playing crop (pico.js — tiny client-side face detector, no server, free) ----
+   Progressive: if pico loads and finds a confident face, center the banner crop on it; otherwise the
+   CSS default crop (center 28%) stays. Spotify's CDN sends CORS *, so canvas pixel access is allowed. */
+let PICO=null, FACE_CLASSIFY=null; const FACE_POS={};
+(function initPico(){
+  try{
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/gh/nenadmarkus/picojs@master/pico.js';
+    s.onload=function(){ try{ PICO=window.pico;
+      fetch('https://cdn.jsdelivr.net/gh/nenadmarkus/pico@master/rnt/cascades/facefinder')
+        .then(r=>r.arrayBuffer()).then(b=>{ FACE_CLASSIFY=PICO.unpack_cascade(new Int8Array(b)); }).catch(()=>{});
+    }catch(e){} };
+    document.head.appendChild(s);
+  }catch(e){}
+})();
+/* Promise<number|null> — vertical center of the strongest face as a 0..1 fraction of image height */
+function faceFraction(url){
+  return new Promise(res=>{
+    if(!PICO||!FACE_CLASSIFY||!url){ res(null); return; }
+    const img=new Image(); img.crossOrigin='anonymous';
+    img.onload=function(){
+      try{
+        const w=img.naturalWidth, h=img.naturalHeight;
+        if(!w||!h){ res(null); return; }
+        const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+        const ctx=cv.getContext('2d'); ctx.drawImage(img,0,0,w,h);
+        const rgba=ctx.getImageData(0,0,w,h).data, gray=new Uint8Array(w*h);
+        for(let r=0;r<h;r++){ for(let c=0;c<w;c++){ const i=(r*w+c)*4; gray[r*w+c]=(2*rgba[i]+7*rgba[i+1]+rgba[i+2])/10; } }
+        let dets=PICO.run_cascade({pixels:gray,nrows:h,ncols:w,ldim:w}, FACE_CLASSIFY,
+          {shiftfactor:0.1, minsize:Math.round(0.10*h), maxsize:h, scalefactor:1.1});
+        dets=PICO.cluster_detections(dets,0.2); // d=[row, col, size, quality]
+        let pick=null; // keep confident, plausibly-sized faces; center on the largest (the main subject)
+        for(const d of dets){ if(d[3]>=1.0 && d[2]>=0.15*h && d[2]<=0.98*h && (!pick||d[2]>pick[2])) pick=d; }
+        res(pick ? pick[0]/h : null);
+      }catch(e){ res(null); }
+    };
+    img.onerror=function(){ res(null); };
+    img.src=url;
+  });
+}
+/* Map the face fraction to a background-position-y % (square art cover-cropped into the wide banner). */
+function positionBanner(bg,url){
+  if(FACE_POS[url]!==undefined){ if(FACE_POS[url]!=null) bg.style.backgroundPosition='center '+FACE_POS[url]+'%'; return; }
+  faceFraction(url).then(fy=>{
+    if(fy==null){ FACE_POS[url]=null; return; }          // no confident face → keep default crop
+    const Wc=bg.offsetWidth||1, Hc=bg.offsetHeight||1, scaledH=Wc; // square image: cover height ≈ container width
+    let P=100*((fy*scaledH - Hc/2)/(scaledH - Hc));
+    if(!isFinite(P)){ FACE_POS[url]=null; return; }
+    P=Math.max(0,Math.min(100,Math.round(P)));
+    FACE_POS[url]=P; bg.style.backgroundPosition='center '+P+'%';
+  });
+}
 function setNowPlaying(np){
   const b=document.getElementById('npBanner'); if(!b) return;
   if(!np){ b.style.display='none'; return; }
   b.style.display='flex';
   document.getElementById('npArt').style.backgroundImage = np.img?`url('${np.img}')`:'';
-  const bg=document.getElementById('npBgart'); if(bg) bg.style.backgroundImage = np.artistImg?`url('${np.artistImg}')`:'';
+  const bg=document.getElementById('npBgart'); if(bg){ bg.style.backgroundImage = np.artistImg?`url('${np.artistImg}')`:''; bg.style.backgroundPosition='center 28%'; if(np.artistImg) positionBanner(bg, np.artistImg); }
   document.getElementById('npTitle').textContent = np.name;
   document.getElementById('npArtist').textContent = np.artist;
   document.getElementById('npLab').innerHTML = np.playing
