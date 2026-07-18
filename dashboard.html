@@ -845,8 +845,8 @@ async function spGet(path,retried){
 }
 // Persistent image cache — Spotify /search is heavily rate-limited for dev-mode apps,
 // so cache artist/track image lookups across loads to nearly eliminate repeat calls.
-let imgCache={}; try{ imgCache=JSON.parse(localStorage.getItem('ss_imgcache')||'{}'); }catch(e){ imgCache={}; }
-function cacheSave(){ try{ const k=Object.keys(imgCache); if(k.length>500) k.slice(0,k.length-400).forEach(x=>delete imgCache[x]); localStorage.setItem('ss_imgcache',JSON.stringify(imgCache)); }catch(e){} }
+let imgCache={}; try{ imgCache=JSON.parse(localStorage.getItem('ss_imgcache2')||'{}'); }catch(e){ imgCache={}; }
+function cacheSave(){ try{ const k=Object.keys(imgCache); if(k.length>500) k.slice(0,k.length-400).forEach(x=>delete imgCache[x]); localStorage.setItem('ss_imgcache2',JSON.stringify(imgCache)); }catch(e){} }
 
 /* ---- Last.fm verified login (step 2 of the connect flow) ---- */
 function startLastfmAuth(){
@@ -894,7 +894,7 @@ async function spSearchArtist(name){
     const j=await r.json();
     val = (j&&j.img) ? {img:j.img, big:j.img, url:'https://open.spotify.com/search/'+encodeURIComponent(name)} : null;
   }catch(e){ return null; }
-  imgCache[key]=val; cacheSave();
+  if(val){ imgCache[key]=val; cacheSave(); } // only cache real hits — empty/cooling results retry next load
   return val;
 }
 
